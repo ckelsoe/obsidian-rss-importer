@@ -116,11 +116,22 @@ export interface NoteWriterOptions {
 	 * callback is missing.
 	 */
 	readonly promptOnDuplicate?: DuplicatePromptCallback;
+	/** Frontmatter key the merged tags are written under. Defaults to feed-tags. */
+	readonly tagDestination?: TagDestination;
 }
+
+/**
+ * Where merged tags are written. "feed-tags" (default) is a plain note property
+ * that stays out of the global Obsidian tag pane/search/graph; "tags" writes
+ * Obsidian tags that DO appear there.
+ */
+export type TagDestination = "feed-tags" | "tags";
 
 export interface ComposeOptions {
 	/** Tags carried by the configured feed; merged with the item's own tags. */
 	readonly feedTags?: string[];
+	/** Frontmatter key the merged tags are written under. Defaults to feed-tags. */
+	readonly tagDestination?: TagDestination;
 }
 
 // -----------------------------------------------------------------------------
@@ -335,6 +346,7 @@ function yamlQuoted(value: string): string {
 function normalizeTag(tag: string): string {
 	return tag
 		.trim()
+		.replace(/^#+/, "")
 		.toLowerCase()
 		.replace(/\s+/g, "-")
 		.replace(/^-+|-+$/g, "");
@@ -424,7 +436,10 @@ export function composeNote(
 	}
 	const tags = mergeTags(opts.feedTags, item.tags);
 	if (tags.length > 0) {
-		lines.push(`${FRONTMATTER_KEYS.tags}: ${yamlTagArray(tags)}`);
+		// Default to a plain note property so feed tags do not flood the Obsidian
+		// tag pane; "tags" opts into real Obsidian tags.
+		const tagKey = opts.tagDestination === "tags" ? FRONTMATTER_KEYS.tags : "feed-tags";
+		lines.push(`${tagKey}: ${yamlTagArray(tags)}`);
 	}
 	// Media items (podcast episodes, attached audio/video) record their media URL
 	// in frontmatter. Force-quoted because it is a URL. Placed after tags and
@@ -559,6 +574,7 @@ export class NoteWriter {
 	private readonly noteNameTemplate: string;
 	private readonly onDuplicate: DuplicatePolicy;
 	private readonly promptOnDuplicate?: DuplicatePromptCallback;
+	private readonly tagDestination?: TagDestination;
 
 	constructor(opts: NoteWriterOptions) {
 		if (
@@ -583,6 +599,7 @@ export class NoteWriter {
 		this.noteNameTemplate = opts.noteNameTemplate;
 		this.onDuplicate = opts.onDuplicate;
 		this.promptOnDuplicate = opts.promptOnDuplicate;
+		this.tagDestination = opts.tagDestination;
 	}
 
 	async writeNote(
@@ -598,7 +615,10 @@ export class NoteWriter {
 				? filename
 				: `${this.destinationFolder}/${filename}`;
 
-		const markdown = composeNote(item, bodyMarkdown, composeOptions ?? {});
+		const markdown = composeNote(item, bodyMarkdown, {
+			...(composeOptions ?? {}),
+			tagDestination: composeOptions?.tagDestination ?? this.tagDestination,
+		});
 
 		const existing = this.vault.getFileByPath(targetPath);
 		if (existing === null) {

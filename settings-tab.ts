@@ -113,6 +113,18 @@ export class RssImporterSettingTab extends PluginSettingTab {
 						},
 					},
 					{
+						name: "Tag destination",
+						desc: "Save feed tags as a note property, or as Obsidian tags that show in the tag pane.",
+						control: {
+							type: "dropdown",
+							key: "tagDestination",
+							options: {
+								"feed-tags": "Note property (feed-tags)",
+								tags: "Obsidian tags",
+							},
+						},
+					},
+					{
 						name: "Parent folder",
 						desc: "Default parent folder for new feeds.",
 						control: { type: "folder", key: "defaultParentFolder" },

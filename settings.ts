@@ -9,6 +9,7 @@
 
 import type { SourceType } from "./feed-source";
 import type { DismissedMap } from "./dismiss-store";
+import type { TagDestination } from "./note-writer";
 
 export type ImagesMode = "link" | "download";
 export type DuplicatePolicy = "skip" | "overwrite" | "prompt";
@@ -51,6 +52,8 @@ export interface RssImporterSettings {
 	requestDelayMs: number;
 	imagesMode: ImagesMode;
 	imageSubfolder: string;
+	/** Where feed tags are written: a plain "feed-tags" property or Obsidian "tags". */
+	tagDestination: TagDestination;
 	debug: boolean;
 	showRibbonIcon: boolean;
 	ribbonIcon: string;
@@ -66,6 +69,7 @@ export const DEFAULT_SETTINGS: RssImporterSettings = {
 	requestDelayMs: 1200,
 	imagesMode: "link",
 	imageSubfolder: "images",
+	tagDestination: "feed-tags",
 	debug: false,
 	showRibbonIcon: true,
 	ribbonIcon: "rss",

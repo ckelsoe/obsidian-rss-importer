@@ -285,6 +285,7 @@ export default class RssImporterPlugin extends Plugin implements RssImporterPlug
 				noteNameTemplate: effectiveNoteNameTemplate(feed, this.settings),
 				onDuplicate: this.settings.duplicatePolicy,
 				promptOnDuplicate: this.promptOnDuplicate,
+				tagDestination: this.settings.tagDestination,
 			});
 
 			let processImages: ((markdown: string, item: import("./feed-source").FeedItem) => Promise<string>) | undefined;

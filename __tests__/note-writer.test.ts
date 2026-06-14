@@ -185,11 +185,25 @@ describe("composeNote", () => {
 		);
 	});
 
-	it("emits a tags flow array merging feed tags and item tags, deduped", () => {
+	it("writes merged tags to the feed-tags property by default (not Obsidian tags)", () => {
 		const item = makeItem({ tags: ["Tech", "news"] });
 		const note = composeNote(item, "BODY", { feedTags: ["news", "weekly"] });
-		// feed tags first, then item tags, normalized and deduped.
-		expect(note).toContain(`${FRONTMATTER_KEYS.tags}: [news, weekly, tech]`);
+		// feed tags first, then item tags, normalized and deduped, under feed-tags.
+		expect(note).toContain("feed-tags: [news, weekly, tech]");
+		// No Obsidian `tags:` line (feed-tags must not be mistaken for it).
+		expect(note).not.toMatch(/^tags: /m);
+	});
+
+	it("writes Obsidian tags when tagDestination is 'tags'", () => {
+		const item = makeItem({ tags: ["news"] });
+		const note = composeNote(item, "BODY", { feedTags: ["weekly"], tagDestination: "tags" });
+		expect(note).toContain(`${FRONTMATTER_KEYS.tags}: [weekly, news]`);
+		expect(note).not.toContain("feed-tags:");
+	});
+
+	it("strips a leading # from a tag so it cannot break the YAML", () => {
+		const note = composeNote(makeItem({ tags: [] }), "BODY", { feedTags: ["#Faith"] });
+		expect(note).toContain("feed-tags: [faith]");
 	});
 
 	it("emits the date as YYYY-MM-DD", () => {
