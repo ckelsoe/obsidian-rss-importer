@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-14
+
+### Added
+- Per-feed media download: save podcast audio and video enclosures into a vault subfolder, or to a folder outside the vault (desktop only) for large media you do not want syncing. Global defaults plus per-feed overrides. Notes record a `media-file` property and link to the local file.
+
+### Changed
+- Feed tags now write to a `feed-tags` note property by default instead of the global Obsidian `tags`, so they no longer flood the tag pane, search, and graph. A "Tag destination" setting switches back to Obsidian tags. A leading `#` is stripped from tags.
+
+### Fixed
+- Imported items show the imported badge immediately after an import, instead of only after closing and reopening the import window.
+- The import result summary is a one-line count plus any failures, instead of listing every item (which overflowed the window).
+
 ## [0.1.2] - 2026-06-14
 
 ### Fixed
