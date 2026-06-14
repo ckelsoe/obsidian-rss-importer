@@ -10,6 +10,7 @@
 import type { SourceType } from "./feed-source";
 import type { DismissedMap } from "./dismiss-store";
 import type { TagDestination } from "./note-writer";
+import type { CleanupConfig } from "./cleanup";
 
 export type ImagesMode = "link" | "download";
 export type DuplicatePolicy = "skip" | "overwrite" | "prompt";
@@ -53,6 +54,13 @@ export interface FeedConfig {
 	mediaLocation?: MediaLocation;
 	mediaSubfolder?: string;
 	mediaOutsideFolder?: string;
+	/**
+	 * Promo-host substrings for this feed's deterministic cleanup. Overrides the
+	 * global default outright (it is not merged) when present.
+	 */
+	cleanupLinkHosts?: string[];
+	/** Whether this feed trims everything after the last horizontal rule. */
+	cleanupTrimAfterLastRule?: boolean;
 }
 
 export interface RssImporterSettings {
@@ -74,6 +82,13 @@ export interface RssImporterSettings {
 	mediaOutsideFolder: string;
 	/** Where feed tags are written: a plain "feed-tags" property or Obsidian "tags". */
 	tagDestination: TagDestination;
+	/**
+	 * Default promo-host substrings for deterministic cleanup. Empty by default;
+	 * a feed with no override inherits this list.
+	 */
+	cleanupLinkHosts: string[];
+	/** Default for trimming everything after the last horizontal rule. */
+	cleanupTrimAfterLastRule: boolean;
 	debug: boolean;
 	showRibbonIcon: boolean;
 	ribbonIcon: string;
@@ -94,6 +109,8 @@ export const DEFAULT_SETTINGS: RssImporterSettings = {
 	mediaSubfolder: "media",
 	mediaOutsideFolder: "",
 	tagDestination: "feed-tags",
+	cleanupLinkHosts: [],
+	cleanupTrimAfterLastRule: false,
 	debug: false,
 	showRibbonIcon: true,
 	ribbonIcon: "rss",
@@ -137,4 +154,33 @@ export function effectiveMediaSubfolder(feed: FeedConfig, settings: RssImporterS
 /** Resolves the effective outside (absolute) media folder for a feed. */
 export function effectiveMediaOutsideFolder(feed: FeedConfig, settings: RssImporterSettings): string {
 	return feed.mediaOutsideFolder ?? settings.mediaOutsideFolder;
+}
+
+/** Resolves the effective cleanup promo-host list for a feed (override or default). */
+export function effectiveCleanupLinkHosts(feed: FeedConfig, settings: RssImporterSettings): string[] {
+	return feed.cleanupLinkHosts ?? settings.cleanupLinkHosts;
+}
+
+/** Resolves whether a feed trims everything after the last horizontal rule. */
+export function effectiveCleanupTrimAfterLastRule(
+	feed: FeedConfig,
+	settings: RssImporterSettings,
+): boolean {
+	return feed.cleanupTrimAfterLastRule ?? settings.cleanupTrimAfterLastRule;
+}
+
+/** Build the concrete CleanupConfig for a feed from its effective settings. */
+export function buildCleanupConfig(feed: FeedConfig, settings: RssImporterSettings): CleanupConfig {
+	return {
+		linkHosts: effectiveCleanupLinkHosts(feed, settings),
+		trimAfterLastRule: effectiveCleanupTrimAfterLastRule(feed, settings),
+	};
+}
+
+/** True when a cleanup config has at least one active rule (worth running). */
+export function cleanupHasRules(config: CleanupConfig): boolean {
+	return (
+		config.trimAfterLastRule ||
+		config.linkHosts.some((host) => host.trim().length > 0)
+	);
 }

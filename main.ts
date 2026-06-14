@@ -1,6 +1,7 @@
 import {
 	Notice,
 	Plugin,
+	TFile,
 	requestUrl,
 	type RequestUrlResponse,
 } from "obsidian";
@@ -8,6 +9,8 @@ import {
 import type { FeedSource, HttpFetcher, HttpRequest, HttpResponse, SourceType } from "./feed-source";
 import {
 	DEFAULT_SETTINGS,
+	buildCleanupConfig,
+	cleanupHasRules,
 	effectiveDownloadMedia,
 	effectiveImageSubfolder,
 	effectiveImagesMode,
@@ -27,6 +30,7 @@ import {
 	type DuplicatePromptDecision,
 } from "./note-writer";
 import { convertHtmlToMarkdown } from "./html-converter";
+import { applyCleanup, splitFrontmatter } from "./cleanup";
 import { ImageDownloader } from "./image-downloader";
 import { MediaDownloader } from "./media-downloader";
 import { DismissStore } from "./dismiss-store";
@@ -100,6 +104,22 @@ function isMediaLocation(value: unknown): value is import("./settings").MediaLoc
 	return value === "vault" || value === "outside";
 }
 
+// Narrow a stored value to an array of strings (the shape of a cleanup host
+// list). Used to validate both the global default and per-feed overrides.
+function isStringArray(value: unknown): value is string[] {
+	return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+
+// Best-effort recovery of a host list from a malformed stored value: keep the
+// string entries of an array, else fall back to the given default. Used only for
+// the global field, which always has a value (unlike droppable per-feed fields).
+function coerceStringArray(value: unknown, fallback: string[]): string[] {
+	if (Array.isArray(value)) {
+		return value.filter((entry): entry is string => typeof entry === "string");
+	}
+	return [...fallback];
+}
+
 // Sync classification used only to pick which source resolves a freshly entered
 // input for the add-feed preview. The resolved feed's own sourceType (captured
 // into the FeedConfig) is what drives import, so a custom-domain Substack that
@@ -158,6 +178,13 @@ export default class RssImporterPlugin extends Plugin implements RssImporterPlug
 				},
 			});
 			this.addCommand({
+				id: "clean-up-notes",
+				name: "Clean up imported notes",
+				callback: () => {
+					this.launchCleanup();
+				},
+			});
+			this.addCommand({
 				id: "export-debug-log",
 				name: "Export debug log",
 				callback: () => {
@@ -206,6 +233,18 @@ export default class RssImporterPlugin extends Plugin implements RssImporterPlug
 		if (!isMediaLocation(this.settings.mediaLocation)) {
 			this.settings.mediaLocation = DEFAULT_SETTINGS.mediaLocation;
 		}
+		// Coerce the global cleanup fields. A stored value can be a wrong type
+		// (data.json is user-editable), so fall back to the default. The host list
+		// is filtered to strings so a single bad entry cannot poison cleanup.
+		if (!isStringArray(this.settings.cleanupLinkHosts)) {
+			this.settings.cleanupLinkHosts = coerceStringArray(
+				this.settings.cleanupLinkHosts,
+				DEFAULT_SETTINGS.cleanupLinkHosts,
+			);
+		}
+		if (typeof this.settings.cleanupTrimAfterLastRule !== "boolean") {
+			this.settings.cleanupTrimAfterLastRule = DEFAULT_SETTINGS.cleanupTrimAfterLastRule;
+		}
 		for (const feed of this.settings.feeds) {
 			// The per-feed override fields are optional literal/string unions on
 			// FeedConfig, but data.json is user-editable so a stored value can be a
@@ -232,6 +271,17 @@ export default class RssImporterPlugin extends Plugin implements RssImporterPlug
 			}
 			if ("mediaOutsideFolder" in record && typeof record["mediaOutsideFolder"] !== "string") {
 				delete record["mediaOutsideFolder"];
+			}
+			// A per-feed cleanup host list must be an array of strings or be dropped
+			// so the global default applies. The trim flag must be a boolean.
+			if ("cleanupLinkHosts" in record && !isStringArray(record["cleanupLinkHosts"])) {
+				delete record["cleanupLinkHosts"];
+			}
+			if (
+				"cleanupTrimAfterLastRule" in record &&
+				typeof record["cleanupTrimAfterLastRule"] !== "boolean"
+			) {
+				delete record["cleanupTrimAfterLastRule"];
 			}
 		}
 	}
@@ -338,12 +388,22 @@ export default class RssImporterPlugin extends Plugin implements RssImporterPlug
 					mediaDownloader.download(item, { location, vaultFolder, outsideFolder });
 			}
 
+			// Build a cleanup function only when this feed has active rules, so a
+			// feed with none pays no per-item cost and the runner's cleanup pass is
+			// skipped entirely.
+			let cleanup: ((body: string) => string) | undefined;
+			const cleanupConfig = buildCleanupConfig(feed, this.settings);
+			if (cleanupHasRules(cleanupConfig)) {
+				cleanup = (body) => applyCleanup(body, cleanupConfig);
+			}
+
 			runner = new ImportRunner({
 				source,
 				noteWriter,
 				convert: convertHtmlToMarkdown,
 				processImages,
 				downloadMedia,
+				cleanup,
 				debugLogger: this.debugLogger,
 			});
 		} catch (err) {
@@ -365,6 +425,72 @@ export default class RssImporterPlugin extends Plugin implements RssImporterPlug
 				void this.saveSettings();
 			},
 		}).open();
+	}
+
+	// Re-runnable cleanup: pick a feed, then re-apply its deterministic cleanup
+	// to the notes already on disk under its destination folder. Mirrors
+	// launchImport's feed-selection flow (no feed -> add one, one -> straight
+	// through, many -> picker).
+	private launchCleanup(): void {
+		if (this.settings.feeds.length === 0) {
+			new Notice("Add a feed first");
+			this.openAddFeed();
+			return;
+		}
+		const feeds = this.settings.feeds;
+		if (feeds.length === 1) {
+			const only = feeds[0];
+			if (only !== undefined) {
+				runGuarded("Clean up imported notes", () => this.cleanupFeedNotes(only));
+			}
+			return;
+		}
+		new FeedPickerModal(this.app, feeds, (feed) => {
+			runGuarded("Clean up imported notes", () => this.cleanupFeedNotes(feed));
+		}).open();
+	}
+
+	/**
+	 * Re-apply a feed's deterministic cleanup to its existing notes. Enumerates
+	 * the markdown files under the feed's destination folder (the same folder-
+	 * prefix scan vault-index uses), splits the frontmatter from the body, cleans
+	 * the body, and writes back via vault.process only when the body changed. The
+	 * frontmatter is never touched. Reports "Cleaned N of M notes".
+	 */
+	private async cleanupFeedNotes(feed: FeedConfig): Promise<void> {
+		const config = buildCleanupConfig(feed, this.settings);
+		if (!cleanupHasRules(config)) {
+			new Notice("This feed has no cleanup rules. Add some in settings.");
+			return;
+		}
+
+		const folder = feed.destinationFolder.trim().replace(/^\/+|\/+$/g, "");
+		const prefix = folder === "" ? "" : `${folder}/`;
+		const files = this.app.vault
+			.getMarkdownFiles()
+			.filter((file) => prefix === "" || file.path.startsWith(prefix));
+
+		let cleaned = 0;
+		for (const file of files) {
+			if (!(file instanceof TFile)) {
+				continue;
+			}
+			let changed = false;
+			await this.app.vault.process(file, (content) => {
+				const parts = splitFrontmatter(content);
+				const cleanedBody = applyCleanup(parts.body, config);
+				if (cleanedBody === parts.body) {
+					return content;
+				}
+				changed = true;
+				return `${parts.frontmatter}${cleanedBody}`;
+			});
+			if (changed) {
+				cleaned++;
+			}
+		}
+
+		new Notice(`Cleaned ${cleaned} of ${files.length} notes`);
 	}
 
 	private openAddFeed(): void {

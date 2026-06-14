@@ -374,6 +374,74 @@ describe("ImportRunner.run", () => {
 		expect(called).toBe(false);
 	});
 
+	it("applies cleanup to the body passed to the writer", async () => {
+		const items = [makeItem({ id: "a" })];
+		const { source } = makeSource({ a: "<p>A</p>" });
+		const { writer, calls } = makeWriter(() =>
+			Promise.resolve({ status: "created", path: "Feeds/a.md" }),
+		);
+		// cleanup uppercases so the effect on the written body is unambiguous.
+		const cleanup = (body: string): string => body.toUpperCase();
+
+		const runner = new ImportRunner({
+			source,
+			noteWriter: writer,
+			convert: identityConvert,
+			cleanup,
+		});
+		await runner.run(items, {});
+
+		// convert produced "MD:<p>A</p>"; cleanup uppercased it before the write.
+		expect(calls[0]?.body).toBe("MD:<P>A</P>");
+	});
+
+	it("runs cleanup AFTER processImages on the rewritten body", async () => {
+		const items = [makeItem({ id: "a" })];
+		const { source } = makeSource({ a: "<p>A</p>" });
+		const { writer, calls } = makeWriter(() =>
+			Promise.resolve({ status: "created", path: "Feeds/a.md" }),
+		);
+		const processImages = (md: string): Promise<string> => Promise.resolve(`${md} +imgs`);
+		const cleanup = (body: string): string => `${body} +clean`;
+
+		const runner = new ImportRunner({
+			source,
+			noteWriter: writer,
+			convert: identityConvert,
+			processImages,
+			cleanup,
+		});
+		await runner.run(items, {});
+
+		// Order: convert -> processImages -> cleanup.
+		expect(calls[0]?.body).toBe("MD:<p>A</p> +imgs +clean");
+	});
+
+	it("keeps the uncleaned body when cleanup throws (best effort)", async () => {
+		const items = [makeItem({ id: "a" })];
+		const { source } = makeSource({ a: "<p>A</p>" });
+		const { writer, calls } = makeWriter(() =>
+			Promise.resolve({ status: "created", path: "Feeds/a.md" }),
+		);
+		const cleanup = (): string => {
+			throw new Error("cleanup blew up");
+		};
+
+		const runner = new ImportRunner({
+			source,
+			noteWriter: writer,
+			convert: identityConvert,
+			cleanup,
+		});
+		const tally = await runner.run(items, {});
+
+		// Item still succeeds; the body is the un-cleaned converted markdown.
+		expect(tally.created).toBe(1);
+		expect(tally.failed).toBe(0);
+		expect(calls[0]?.body).toBe("MD:<p>A</p>");
+		expect(errorSpy).toHaveBeenCalled();
+	});
+
 	it("uses the processImages result when it succeeds", async () => {
 		const items = [makeItem({ id: "a" })];
 		const { source } = makeSource({ a: "<p>A</p>" });

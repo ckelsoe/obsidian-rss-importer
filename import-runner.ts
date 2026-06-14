@@ -72,6 +72,12 @@ export interface ImportRunnerDeps {
 	 * item: the runner catches, logs, and writes the note without a local file.
 	 */
 	downloadMedia?: (item: FeedItem) => Promise<string | null>;
+	/**
+	 * Optional deterministic cleanup applied to the converted body before it is
+	 * written, so imported notes land clean. A throw must NOT fail the item: the
+	 * runner catches, logs, and keeps the uncleaned body.
+	 */
+	cleanup?: (body: string) => string;
 	/** Optional debug logger; defaults to a no-op when absent. */
 	debugLogger?: DebugLogger;
 }
@@ -104,6 +110,7 @@ export class ImportRunner {
 		item: FeedItem,
 	) => Promise<string>;
 	private readonly downloadMedia?: (item: FeedItem) => Promise<string | null>;
+	private readonly cleanup?: (body: string) => string;
 	private readonly debug?: DebugLogger;
 
 	constructor(deps: ImportRunnerDeps) {
@@ -112,6 +119,7 @@ export class ImportRunner {
 		this.convert = deps.convert;
 		this.processImages = deps.processImages;
 		this.downloadMedia = deps.downloadMedia;
+		this.cleanup = deps.cleanup;
 		this.debug = deps.debugLogger;
 	}
 
@@ -194,6 +202,22 @@ export class ImportRunner {
 					this.debug?.log({
 						kind: "error",
 						message: `Image processing failed for "${full.title}", keeping converted text`,
+						payload: describeError(err),
+					});
+				}
+			}
+
+			// Deterministic cleanup of promotional clutter, applied after image
+			// rewriting so it sees the final link targets. Best-effort: a throwing
+			// cleanup must NOT fail the item — keep the uncleaned body and log it.
+			if (this.cleanup !== undefined) {
+				try {
+					markdown = this.cleanup(markdown);
+				} catch (err) {
+					console.error(err);
+					this.debug?.log({
+						kind: "error",
+						message: `Cleanup failed for "${full.title}", keeping the uncleaned text`,
 						payload: describeError(err),
 					});
 				}

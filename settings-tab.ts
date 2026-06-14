@@ -21,6 +21,7 @@ import type { FeedConfig, RssImporterSettings } from "./settings";
 import {
 	REQUEST_DELAY_MIN,
 	REQUEST_DELAY_MAX,
+	effectiveCleanupTrimAfterLastRule,
 	effectiveDownloadMedia,
 	effectiveMediaLocation,
 	effectiveMediaSubfolder,
@@ -158,6 +159,16 @@ export class RssImporterSettingTab extends PluginSettingTab {
 						},
 					},
 					{
+						name: "Cleanup link hosts",
+						desc: "Comma-separated promo link hosts or paths (for example buymeacoffee.com, /subscribe). Blocks linking these are removed.",
+						control: { type: "text", key: "cleanupLinkHosts" },
+					},
+					{
+						name: "Trim after last horizontal rule",
+						desc: "Remove everything after the last horizontal rule, the trailing footer region.",
+						control: { type: "toggle", key: "cleanupTrimAfterLastRule" },
+					},
+					{
 						name: "Parent folder",
 						desc: "Default parent folder for new feeds.",
 						control: { type: "folder", key: "defaultParentFolder" },
@@ -181,12 +192,26 @@ export class RssImporterSettingTab extends PluginSettingTab {
 	// `as unknown as Record<string, unknown>` cast is the controlled pattern the
 	// reference plugin uses for the settings store; keys come only from the
 	// control definitions above.
+	//
+	// cleanupLinkHosts is stored as a string[] but presented in a single-line
+	// text control, so it round-trips through a comma-separated string here while
+	// every other key passes through unchanged.
 	getControlValue(key: string): unknown {
+		if (key === "cleanupLinkHosts") {
+			return this.plugin.settings.cleanupLinkHosts.join(", ");
+		}
 		return (this.plugin.settings as unknown as Record<string, unknown>)[key];
 	}
 
 	async setControlValue(key: string, value: unknown): Promise<void> {
-		(this.plugin.settings as unknown as Record<string, unknown>)[key] = value;
+		if (key === "cleanupLinkHosts") {
+			this.plugin.settings.cleanupLinkHosts = String(value)
+				.split(",")
+				.map((host) => host.trim())
+				.filter((host) => host.length > 0);
+		} else {
+			(this.plugin.settings as unknown as Record<string, unknown>)[key] = value;
+		}
 		await this.plugin.saveSettings();
 		this.refreshDomState();
 	}
@@ -328,6 +353,40 @@ class FeedEditorPage extends SettingPage {
 					.setValue(effectiveMediaSubfolder(feed, settings))
 					.onChange(async (value) => {
 						feed.mediaSubfolder = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(editor)
+			.setName("Cleanup link hosts")
+			.setDesc(
+				"One promo link host or path per line (for example buymeacoffee.com or /subscribe). Blocks linking these are removed.",
+			)
+			.addTextArea((text) =>
+				text
+					.setValue((feed.cleanupLinkHosts ?? []).join("\n"))
+					.onChange(async (value) => {
+						const hosts = value
+							.split("\n")
+							.map((line) => line.trim())
+							.filter((line) => line.length > 0);
+						if (hosts.length > 0) {
+							feed.cleanupLinkHosts = hosts;
+						} else {
+							delete feed.cleanupLinkHosts;
+						}
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(editor)
+			.setName("Trim after last horizontal rule")
+			.setDesc("Remove everything after the last horizontal rule, the trailing footer region.")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(effectiveCleanupTrimAfterLastRule(feed, settings))
+					.onChange(async (value) => {
+						feed.cleanupTrimAfterLastRule = value;
 						await this.plugin.saveSettings();
 					}),
 			);
