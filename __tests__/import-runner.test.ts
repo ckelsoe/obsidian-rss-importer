@@ -288,6 +288,92 @@ describe("ImportRunner.run", () => {
 		expect(calls[0]?.body).toBe("MD:<p>A</p>");
 	});
 
+	it("passes the downloadMedia result to the writer as mediaFile", async () => {
+		const items = [makeItem({ id: "a", mediaUrl: "https://m.test/a.mp3" })];
+		const { source } = makeSource({ a: "<p>A</p>" });
+		const composeOpts: Array<Record<string, unknown> | undefined> = [];
+		const stub = {
+			writeNote(
+				_item: FeedItem,
+				_body: string,
+				opts?: Record<string, unknown>,
+			): Promise<WriteOutcome> {
+				composeOpts.push(opts);
+				return Promise.resolve({ status: "created", path: "Feeds/a.md" });
+			},
+		};
+		const writer = stub as unknown as NoteWriter;
+		const downloadMedia = (): Promise<string | null> =>
+			Promise.resolve("Feeds/media/a.mp3");
+
+		const runner = new ImportRunner({
+			source,
+			noteWriter: writer,
+			convert: identityConvert,
+			downloadMedia,
+		});
+		await runner.run(items, {});
+
+		expect(composeOpts).toHaveLength(1);
+		expect(composeOpts[0]?.mediaFile).toBe("Feeds/media/a.mp3");
+	});
+
+	it("writes the note without mediaFile when downloadMedia fails (best effort)", async () => {
+		const items = [makeItem({ id: "a", mediaUrl: "https://m.test/a.mp3" })];
+		const { source } = makeSource({ a: "<p>A</p>" });
+		const composeOpts: Array<Record<string, unknown> | undefined> = [];
+		const stub = {
+			writeNote(
+				_item: FeedItem,
+				_body: string,
+				opts?: Record<string, unknown>,
+			): Promise<WriteOutcome> {
+				composeOpts.push(opts);
+				return Promise.resolve({ status: "created", path: "Feeds/a.md" });
+			},
+		};
+		const writer = stub as unknown as NoteWriter;
+		const downloadMedia = (): Promise<string | null> =>
+			Promise.reject(new Error("media host down"));
+
+		const runner = new ImportRunner({
+			source,
+			noteWriter: writer,
+			convert: identityConvert,
+			downloadMedia,
+		});
+		const tally = await runner.run(items, {});
+
+		// Item still succeeds; mediaFile is undefined so the remote link is used.
+		expect(tally.created).toBe(1);
+		expect(tally.failed).toBe(0);
+		expect(composeOpts[0]?.mediaFile).toBeUndefined();
+		expect(errorSpy).toHaveBeenCalled();
+	});
+
+	it("skips downloadMedia when the item has no media url", async () => {
+		const items = [makeItem({ id: "a", mediaUrl: null })];
+		const { source } = makeSource({ a: "<p>A</p>" });
+		const { writer } = makeWriter(() =>
+			Promise.resolve({ status: "created", path: "Feeds/a.md" }),
+		);
+		let called = false;
+		const downloadMedia = (): Promise<string | null> => {
+			called = true;
+			return Promise.resolve(null);
+		};
+
+		const runner = new ImportRunner({
+			source,
+			noteWriter: writer,
+			convert: identityConvert,
+			downloadMedia,
+		});
+		await runner.run(items, {});
+
+		expect(called).toBe(false);
+	});
+
 	it("uses the processImages result when it succeeds", async () => {
 		const items = [makeItem({ id: "a" })];
 		const { source } = makeSource({ a: "<p>A</p>" });

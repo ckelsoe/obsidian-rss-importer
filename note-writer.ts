@@ -132,6 +132,13 @@ export interface ComposeOptions {
 	readonly feedTags?: string[];
 	/** Frontmatter key the merged tags are written under. Defaults to feed-tags. */
 	readonly tagDestination?: TagDestination;
+	/**
+	 * Local path of the downloaded media file (vault-relative or absolute). When
+	 * set, a `media-file` frontmatter line is added and the body media link points
+	 * at this local file instead of the remote media-url. The remote media-url
+	 * frontmatter line is kept for reference.
+	 */
+	readonly mediaFile?: string;
 }
 
 // -----------------------------------------------------------------------------
@@ -413,7 +420,10 @@ const TRUNCATED_CALLOUT = [
  * When the item carries media (a podcast/audio/video enclosure), a `media-url`
  * frontmatter line records it (force-quoted, since it is a URL) and a labelled
  * link to the media is appended to the body so the episode is reachable from the
- * note.
+ * note. When opts.mediaFile is set (the enclosure was downloaded locally), a
+ * `media-file` frontmatter line is added after media-url and the body link points
+ * at the local file instead of the remote URL; the media-url line is kept for
+ * reference.
  */
 export function composeNote(
 	item: FeedItem,
@@ -445,8 +455,14 @@ export function composeNote(
 	// in frontmatter. Force-quoted because it is a URL. Placed after tags and
 	// before the truncated marker.
 	const hasMedia = item.mediaUrl !== null && item.mediaUrl.length > 0;
+	const hasMediaFile = opts.mediaFile !== undefined && opts.mediaFile.length > 0;
 	if (hasMedia && item.mediaUrl !== null) {
 		lines.push(`media-url: ${yamlQuoted(item.mediaUrl)}`);
+	}
+	// When the enclosure was downloaded, record the local file path right after
+	// the remote url. Force-quoted because a path can contain spaces or colons.
+	if (hasMediaFile && opts.mediaFile !== undefined) {
+		lines.push(`media-file: ${yamlQuoted(opts.mediaFile)}`);
 	}
 	if (item.isTruncated) {
 		// Machine-readable marker alongside the visible callout below.
@@ -459,8 +475,12 @@ export function composeNote(
 		: bodyMarkdown;
 
 	// Link the media at the end of the body so a podcast note plays its episode
-	// and any other media item is reachable from the note.
-	if (hasMedia && item.mediaUrl !== null) {
+	// and any other media item is reachable from the note. Prefer the downloaded
+	// local file when present; otherwise fall back to the remote url.
+	if (hasMediaFile && opts.mediaFile !== undefined) {
+		const label = item.kind === "podcast" ? "Episode audio" : "Media";
+		body = `${body}\n\n[${label}](${opts.mediaFile})`;
+	} else if (hasMedia && item.mediaUrl !== null) {
 		const label = item.kind === "podcast" ? "Episode audio" : "Media";
 		body = `${body}\n\n[${label}](${item.mediaUrl})`;
 	}

@@ -8,8 +8,12 @@ import {
 import type { FeedSource, HttpFetcher, HttpRequest, HttpResponse, SourceType } from "./feed-source";
 import {
 	DEFAULT_SETTINGS,
+	effectiveDownloadMedia,
 	effectiveImageSubfolder,
 	effectiveImagesMode,
+	effectiveMediaLocation,
+	effectiveMediaOutsideFolder,
+	effectiveMediaSubfolder,
 	effectiveNoteNameTemplate,
 	type FeedConfig,
 	type RssImporterSettings,
@@ -24,6 +28,7 @@ import {
 } from "./note-writer";
 import { convertHtmlToMarkdown } from "./html-converter";
 import { ImageDownloader } from "./image-downloader";
+import { MediaDownloader } from "./media-downloader";
 import { DismissStore } from "./dismiss-store";
 import { BufferedDebugLogger } from "./debug-logger";
 import { ImportRunner } from "./import-runner";
@@ -89,6 +94,10 @@ function isImagesMode(value: unknown): value is import("./settings").ImagesMode 
 
 function isDuplicatePolicy(value: unknown): value is import("./settings").DuplicatePolicy {
 	return value === "skip" || value === "overwrite" || value === "prompt";
+}
+
+function isMediaLocation(value: unknown): value is import("./settings").MediaLocation {
+	return value === "vault" || value === "outside";
 }
 
 // Sync classification used only to pick which source resolves a freshly entered
@@ -194,6 +203,9 @@ export default class RssImporterPlugin extends Plugin implements RssImporterPlug
 		if (!isDuplicatePolicy(this.settings.duplicatePolicy)) {
 			this.settings.duplicatePolicy = DEFAULT_SETTINGS.duplicatePolicy;
 		}
+		if (!isMediaLocation(this.settings.mediaLocation)) {
+			this.settings.mediaLocation = DEFAULT_SETTINGS.mediaLocation;
+		}
 		for (const feed of this.settings.feeds) {
 			// The per-feed override fields are optional literal/string unions on
 			// FeedConfig, but data.json is user-editable so a stored value can be a
@@ -208,6 +220,18 @@ export default class RssImporterPlugin extends Plugin implements RssImporterPlug
 			}
 			if ("imageSubfolder" in record && typeof record["imageSubfolder"] !== "string") {
 				delete record["imageSubfolder"];
+			}
+			if ("downloadMedia" in record && typeof record["downloadMedia"] !== "boolean") {
+				delete record["downloadMedia"];
+			}
+			if ("mediaLocation" in record && !isMediaLocation(record["mediaLocation"])) {
+				delete record["mediaLocation"];
+			}
+			if ("mediaSubfolder" in record && typeof record["mediaSubfolder"] !== "string") {
+				delete record["mediaSubfolder"];
+			}
+			if ("mediaOutsideFolder" in record && typeof record["mediaOutsideFolder"] !== "string") {
+				delete record["mediaOutsideFolder"];
 			}
 		}
 	}
@@ -297,11 +321,29 @@ export default class RssImporterPlugin extends Plugin implements RssImporterPlug
 				processImages = (markdown) => downloader.downloadAndRewrite(markdown, folderPath);
 			}
 
+			let downloadMedia: ((item: import("./feed-source").FeedItem) => Promise<string | null>) | undefined;
+			if (effectiveDownloadMedia(feed, this.settings)) {
+				const mediaDownloader = new MediaDownloader({
+					fetcher: this.makeFetcher(),
+					vault: this.app.vault,
+				});
+				const location = effectiveMediaLocation(feed, this.settings);
+				const mediaSubfolder = effectiveMediaSubfolder(feed, this.settings);
+				const vaultFolder =
+					feed.destinationFolder === ""
+						? mediaSubfolder
+						: `${feed.destinationFolder}/${mediaSubfolder}`;
+				const outsideFolder = effectiveMediaOutsideFolder(feed, this.settings);
+				downloadMedia = (item) =>
+					mediaDownloader.download(item, { location, vaultFolder, outsideFolder });
+			}
+
 			runner = new ImportRunner({
 				source,
 				noteWriter,
 				convert: convertHtmlToMarkdown,
 				processImages,
+				downloadMedia,
 				debugLogger: this.debugLogger,
 			});
 		} catch (err) {

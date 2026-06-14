@@ -276,6 +276,42 @@ describe("composeNote", () => {
 		expect(note).not.toContain("[Episode audio]");
 		expect(note).not.toContain("[Media]");
 	});
+
+	it("records media-file and links the local file when mediaFile is set", () => {
+		const mediaUrl = "https://media.example.com/ep/42.mp3";
+		const localPath = "Feeds/Podcast/media/Episode-42.mp3";
+		const item = makeItem({
+			kind: "podcast",
+			mediaUrl,
+			mediaType: "audio/mpeg",
+		});
+		const note = composeNote(item, "BODY", { mediaFile: localPath });
+		// Remote url is kept in frontmatter for reference.
+		expect(note).toContain(`media-url: "${mediaUrl}"`);
+		// Local file path recorded (force-quoted) after media-url.
+		expect(note).toContain(`media-file: "${localPath}"`);
+		const urlIndex = note.indexOf("media-url:");
+		const fileIndex = note.indexOf("media-file:");
+		expect(urlIndex).toBeGreaterThanOrEqual(0);
+		expect(fileIndex).toBeGreaterThan(urlIndex);
+		// Body links the LOCAL file, not the remote url.
+		expect(note).toContain(`[Episode audio](${localPath})`);
+		expect(note).not.toContain(`[Episode audio](${mediaUrl})`);
+	});
+
+	it("labels a non-podcast local media link as Media", () => {
+		const mediaUrl = "https://media.example.com/clip.mp4";
+		const localPath = "Feeds/media/clip.mp4";
+		const item = makeItem({
+			kind: "article",
+			mediaUrl,
+			mediaType: "video/mp4",
+		});
+		const note = composeNote(item, "BODY", { mediaFile: localPath });
+		expect(note).toContain(`media-file: "${localPath}"`);
+		expect(note).toContain(`[Media](${localPath})`);
+		expect(note).not.toContain(`[Media](${mediaUrl})`);
+	});
 });
 
 // -----------------------------------------------------------------------------

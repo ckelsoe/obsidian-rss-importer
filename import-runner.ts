@@ -65,6 +65,13 @@ export interface ImportRunnerDeps {
 	convert: (html: string) => string;
 	/** Optional best-effort image download + markdown rewrite. */
 	processImages?: (markdown: string, item: FeedItem) => Promise<string>;
+	/**
+	 * Optional best-effort media (podcast audio/video enclosure) download. Returns
+	 * the local path to thread into the note as composeOptions.mediaFile, or null
+	 * when there is no media or the download failed. A failure must NOT fail the
+	 * item: the runner catches, logs, and writes the note without a local file.
+	 */
+	downloadMedia?: (item: FeedItem) => Promise<string | null>;
 	/** Optional debug logger; defaults to a no-op when absent. */
 	debugLogger?: DebugLogger;
 }
@@ -96,6 +103,7 @@ export class ImportRunner {
 		markdown: string,
 		item: FeedItem,
 	) => Promise<string>;
+	private readonly downloadMedia?: (item: FeedItem) => Promise<string | null>;
 	private readonly debug?: DebugLogger;
 
 	constructor(deps: ImportRunnerDeps) {
@@ -103,6 +111,7 @@ export class ImportRunner {
 		this.noteWriter = deps.noteWriter;
 		this.convert = deps.convert;
 		this.processImages = deps.processImages;
+		this.downloadMedia = deps.downloadMedia;
 		this.debug = deps.debugLogger;
 	}
 
@@ -201,8 +210,29 @@ export class ImportRunner {
 				});
 			}
 
+			// Best-effort media download. A failure must NOT fail the item: catch,
+			// log, and write the note without a local file (the remote media-url
+			// stays in frontmatter and as the body link).
+			let mediaFile: string | undefined;
+			if (this.downloadMedia !== undefined && full.mediaUrl !== null && full.mediaUrl.length > 0) {
+				try {
+					const local = await this.downloadMedia(full);
+					if (local !== null) {
+						mediaFile = local;
+					}
+				} catch (err) {
+					console.error(err);
+					this.debug?.log({
+						kind: "error",
+						message: `Media download failed for "${full.title}", keeping the remote link`,
+						payload: describeError(err),
+					});
+				}
+			}
+
 			const outcome = await this.noteWriter.writeNote(full, markdown, {
 				feedTags,
+				mediaFile,
 			});
 			this.debug?.log({
 				kind: "note",

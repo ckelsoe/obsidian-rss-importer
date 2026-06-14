@@ -18,7 +18,13 @@ import {
 } from "obsidian";
 import type { FeedSource } from "./feed-source";
 import type { FeedConfig, RssImporterSettings } from "./settings";
-import { REQUEST_DELAY_MIN, REQUEST_DELAY_MAX } from "./settings";
+import {
+	REQUEST_DELAY_MIN,
+	REQUEST_DELAY_MAX,
+	effectiveDownloadMedia,
+	effectiveMediaLocation,
+	effectiveMediaSubfolder,
+} from "./settings";
 import { AddFeedModal } from "./add-feed-modal";
 
 /**
@@ -111,6 +117,33 @@ export class RssImporterSettingTab extends PluginSettingTab {
 								download: "Download into vault",
 							},
 						},
+					},
+					{
+						name: "Download media",
+						desc: "Save podcast audio and video enclosures locally, not just link them.",
+						control: { type: "toggle", key: "downloadMedia" },
+					},
+					{
+						name: "Media location",
+						desc: "Save media into a vault subfolder, or to a folder outside the vault.",
+						control: {
+							type: "dropdown",
+							key: "mediaLocation",
+							options: {
+								vault: "Vault subfolder",
+								outside: "Outside the vault",
+							},
+						},
+					},
+					{
+						name: "Media subfolder",
+						desc: "Subfolder under each feed's folder for downloaded media.",
+						control: { type: "text", key: "mediaSubfolder" },
+					},
+					{
+						name: "Media folder outside vault",
+						desc: "Absolute folder path for media when saving outside the vault (desktop only).",
+						control: { type: "text", key: "mediaOutsideFolder" },
 					},
 					{
 						name: "Tag destination",
@@ -257,6 +290,46 @@ class FeedEditorPage extends SettingPage {
 					feed.importSourceTags = value;
 					await this.plugin.saveSettings();
 				}),
+			);
+
+		const settings = this.plugin.settings;
+
+		new Setting(editor)
+			.setName("Download media")
+			.setDesc("Save podcast audio and video enclosures locally for this feed.")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(effectiveDownloadMedia(feed, settings))
+					.onChange(async (value) => {
+						feed.downloadMedia = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(editor)
+			.setName("Media location")
+			.setDesc("Save media into a vault subfolder, or to a folder outside the vault.")
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption("vault", "Vault subfolder")
+					.addOption("outside", "Outside the vault")
+					.setValue(effectiveMediaLocation(feed, settings))
+					.onChange(async (value) => {
+						feed.mediaLocation = value === "outside" ? "outside" : "vault";
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(editor)
+			.setName("Media subfolder")
+			.setDesc("Subfolder under this feed's folder for downloaded media.")
+			.addText((text) =>
+				text
+					.setValue(effectiveMediaSubfolder(feed, settings))
+					.onChange(async (value) => {
+						feed.mediaSubfolder = value;
+						await this.plugin.saveSettings();
+					}),
 			);
 
 		new Setting(editor)

@@ -14,6 +14,14 @@ import type { TagDestination } from "./note-writer";
 export type ImagesMode = "link" | "download";
 export type DuplicatePolicy = "skip" | "overwrite" | "prompt";
 
+/**
+ * Where downloaded media (podcast audio/video enclosures) is written. "vault"
+ * writes into a subfolder of the feed's destination folder; "outside" writes to
+ * an absolute filesystem path (desktop only) so large media stays out of the
+ * synced vault.
+ */
+export type MediaLocation = "vault" | "outside";
+
 /** A configured feed and the resolved metadata captured when it was added. */
 export interface FeedConfig {
 	/** Stable id derived from the canonical host; also the note sourceId. */
@@ -41,6 +49,10 @@ export interface FeedConfig {
 	imagesMode?: ImagesMode;
 	imageSubfolder?: string;
 	noteNameTemplate?: string;
+	downloadMedia?: boolean;
+	mediaLocation?: MediaLocation;
+	mediaSubfolder?: string;
+	mediaOutsideFolder?: string;
 }
 
 export interface RssImporterSettings {
@@ -52,6 +64,14 @@ export interface RssImporterSettings {
 	requestDelayMs: number;
 	imagesMode: ImagesMode;
 	imageSubfolder: string;
+	/** Download podcast/audio/video enclosures, not just link them. */
+	downloadMedia: boolean;
+	/** Where downloaded media is written: a vault subfolder or an outside path. */
+	mediaLocation: MediaLocation;
+	/** Subfolder (under the feed's destination) for media when mediaLocation is "vault". */
+	mediaSubfolder: string;
+	/** Absolute filesystem folder for media when mediaLocation is "outside" (desktop only). */
+	mediaOutsideFolder: string;
 	/** Where feed tags are written: a plain "feed-tags" property or Obsidian "tags". */
 	tagDestination: TagDestination;
 	debug: boolean;
@@ -69,6 +89,10 @@ export const DEFAULT_SETTINGS: RssImporterSettings = {
 	requestDelayMs: 1200,
 	imagesMode: "link",
 	imageSubfolder: "images",
+	downloadMedia: false,
+	mediaLocation: "vault",
+	mediaSubfolder: "media",
+	mediaOutsideFolder: "",
 	tagDestination: "feed-tags",
 	debug: false,
 	showRibbonIcon: true,
@@ -93,4 +117,24 @@ export function effectiveNoteNameTemplate(feed: FeedConfig, settings: RssImporte
 /** Resolves the effective image subfolder name for a feed. */
 export function effectiveImageSubfolder(feed: FeedConfig, settings: RssImporterSettings): string {
 	return feed.imageSubfolder ?? settings.imageSubfolder;
+}
+
+/** Resolves whether media is downloaded for a feed (per-feed override or default). */
+export function effectiveDownloadMedia(feed: FeedConfig, settings: RssImporterSettings): boolean {
+	return feed.downloadMedia ?? settings.downloadMedia;
+}
+
+/** Resolves the effective media location for a feed. */
+export function effectiveMediaLocation(feed: FeedConfig, settings: RssImporterSettings): MediaLocation {
+	return feed.mediaLocation ?? settings.mediaLocation;
+}
+
+/** Resolves the effective media subfolder name for a feed. */
+export function effectiveMediaSubfolder(feed: FeedConfig, settings: RssImporterSettings): string {
+	return feed.mediaSubfolder ?? settings.mediaSubfolder;
+}
+
+/** Resolves the effective outside (absolute) media folder for a feed. */
+export function effectiveMediaOutsideFolder(feed: FeedConfig, settings: RssImporterSettings): string {
+	return feed.mediaOutsideFolder ?? settings.mediaOutsideFolder;
 }
