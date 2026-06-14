@@ -69,8 +69,8 @@ export class AddFeedModal extends Modal {
 	private folderInputEl: HTMLInputElement | null = null;
 	private tagsInputEl: HTMLInputElement | null = null;
 	private previewEl: HTMLDivElement | null = null;
-	private saveButtonEl: HTMLButtonElement | null = null;
 	private folderEdited = false;
+	private saving = false;
 	private focusTimer: number | null = null;
 
 	constructor(app: App, deps: AddFeedModalDeps) {
@@ -151,16 +151,14 @@ export class AddFeedModal extends Modal {
 				this.close();
 			}),
 		);
-		footer.addButton((btn) => {
+		footer.addButton((btn) =>
 			btn
 				.setButtonText("Save")
 				.setCta()
-				.setDisabled(true)
 				.onClick(() => {
 					void this.save();
-				});
-			this.saveButtonEl = btn.buttonEl;
-		});
+				}),
+		);
 
 		this.focusTimer = window.setTimeout(() => {
 			this.focusTimer = null;
@@ -185,7 +183,6 @@ export class AddFeedModal extends Modal {
 			new Notice("Enter a feed URL or handle first.");
 			return;
 		}
-		this.setSaveDisabled(true);
 		this.renderPreviewLoading();
 		try {
 			const { source } = this.deps.makeSource(input);
@@ -194,7 +191,6 @@ export class AddFeedModal extends Modal {
 			this.resolved = resolved;
 			this.renderPreviewCard(resolved);
 			this.seedFolderDefault(resolved);
-			this.setSaveDisabled(false);
 		} catch (err) {
 			this.resolved = null;
 			this.source = null;
@@ -208,8 +204,25 @@ export class AddFeedModal extends Modal {
 	// then hand it to the caller. Guards against a Save click that races the
 	// resolve state.
 	private async save(): Promise<void> {
+		if (this.saving) {
+			return;
+		}
+		this.saving = true;
+		try {
+			await this.saveResolvedFeed();
+		} finally {
+			this.saving = false;
+		}
+	}
+
+	private async saveResolvedFeed(): Promise<void> {
+		// Resolve on demand when Save is clicked without a prior Resolve, so Save
+		// works whether or not the user used the Resolve button first.
 		if (this.resolved === null) {
-			new Notice("Resolve a feed before saving.");
+			await this.resolveInput();
+		}
+		if (this.resolved === null) {
+			// resolveInput already surfaced the failure; nothing to save.
 			return;
 		}
 		const resolved = this.resolved;
@@ -254,12 +267,6 @@ export class AddFeedModal extends Modal {
 			this.deps.settings.defaultParentFolder,
 			resolved.publicationTitle,
 		);
-	}
-
-	private setSaveDisabled(disabled: boolean): void {
-		if (this.saveButtonEl !== null) {
-			this.saveButtonEl.toggleAttribute("disabled", disabled);
-		}
 	}
 
 	private renderPreviewPlaceholder(): void {
