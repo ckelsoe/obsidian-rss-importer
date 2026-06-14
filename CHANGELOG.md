@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-14
+
+### Added
+- Substack archive backfill: a "Load older" button in the import window pages back through a publication's archive beyond the recent RSS window (roughly the latest 20 items), so you can reach much older posts. Each older post's body is fetched on demand. Generic RSS and podcast feeds expose only their recent window, so the control appears for Substack feeds only.
+
 ## [0.2.0] - 2026-06-14
 
 ### Added
