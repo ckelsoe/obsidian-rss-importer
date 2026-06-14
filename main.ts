@@ -115,53 +115,63 @@ export default class RssImporterPlugin extends Plugin implements RssImporterPlug
 	private ribbonEl: HTMLElement | null = null;
 
 	async onload(): Promise<void> {
-		await this.loadSettings();
+		// A load failure here is otherwise silent in the UI (Obsidian only logs
+		// it to the developer console), so surface it with a Notice as well.
+		try {
+			await this.loadSettings();
 
-		this.debugLogger = new BufferedDebugLogger(this.settings.debug, {
-			headerLines: [`RSS Importer version: ${this.manifest.version}`],
-		});
+			this.debugLogger = new BufferedDebugLogger(this.settings.debug, {
+				headerLines: [`RSS Importer version: ${this.manifest.version}`],
+			});
 
-		this.dismissStore = new DismissStore({
-			read: () => this.settings.dismissed,
-			write: async (map) => {
-				this.settings.dismissed = map;
-				await this.saveData(this.settings);
-			},
-		});
+			this.dismissStore = new DismissStore({
+				read: () => this.settings.dismissed,
+				write: async (map) => {
+					this.settings.dismissed = map;
+					await this.saveData(this.settings);
+				},
+			});
 
-		this.addSettingTab(new RssImporterSettingTab(this.app, this));
+			this.addSettingTab(new RssImporterSettingTab(this.app, this));
 
-		this.addCommand({
-			id: "import",
-			name: "Import from a feed",
-			callback: () => {
-				this.launchImport();
-			},
-		});
-		this.addCommand({
-			id: "add-feed",
-			name: "Add feed",
-			callback: () => {
-				this.openAddFeed();
-			},
-		});
-		this.addCommand({
-			id: "export-debug-log",
-			name: "Export debug log",
-			callback: () => {
-				runGuarded("Export debug log", () => this.exportDebugLog());
-			},
-		});
-		this.addCommand({
-			id: "clear-debug-log",
-			name: "Clear debug log",
-			callback: () => {
-				this.debugLogger.clear();
-				new Notice("Debug log cleared");
-			},
-		});
+			this.addCommand({
+				id: "import",
+				name: "Import from a feed",
+				callback: () => {
+					this.launchImport();
+				},
+			});
+			this.addCommand({
+				id: "add-feed",
+				name: "Add feed",
+				callback: () => {
+					this.openAddFeed();
+				},
+			});
+			this.addCommand({
+				id: "export-debug-log",
+				name: "Export debug log",
+				callback: () => {
+					runGuarded("Export debug log", () => this.exportDebugLog());
+				},
+			});
+			this.addCommand({
+				id: "clear-debug-log",
+				name: "Clear debug log",
+				callback: () => {
+					this.debugLogger.clear();
+					new Notice("Debug log cleared");
+				},
+			});
 
-		this.updateRibbonIcon();
+			this.updateRibbonIcon();
+		} catch (err) {
+			console.error("RSS Importer failed to load", err);
+			new Notice(
+				`RSS importer failed to load. ${err instanceof Error ? err.message : "See the console for details."}`,
+			);
+			throw err;
+		}
 	}
 
 	async loadSettings(): Promise<void> {

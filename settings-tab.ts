@@ -34,15 +34,18 @@ export interface RssImporterPluginLike extends Plugin {
 }
 
 export class RssImporterSettingTab extends PluginSettingTab {
-	private readonly typedPlugin: RssImporterPluginLike;
+	// Narrow the base PluginSettingTab `plugin` field to our typed plugin. This
+	// must be a plain field, NOT a getter: the base constructor assigns
+	// `this.plugin = plugin`, which throws against a getter-only accessor.
+	plugin: RssImporterPluginLike;
 
 	constructor(app: App, plugin: RssImporterPluginLike) {
 		super(app, plugin);
-		this.typedPlugin = plugin;
+		this.plugin = plugin;
 	}
 
 	getSettingDefinitions(): SettingDefinitionItem[] {
-		const feeds = this.typedPlugin.settings.feeds;
+		const feeds = this.plugin.settings.feeds;
 		return [
 			{
 				type: "list",
@@ -134,41 +137,37 @@ export class RssImporterSettingTab extends PluginSettingTab {
 	// reference plugin uses for the settings store; keys come only from the
 	// control definitions above.
 	getControlValue(key: string): unknown {
-		return (this.typedPlugin.settings as unknown as Record<string, unknown>)[key];
+		return (this.plugin.settings as unknown as Record<string, unknown>)[key];
 	}
 
 	async setControlValue(key: string, value: unknown): Promise<void> {
-		(this.typedPlugin.settings as unknown as Record<string, unknown>)[key] = value;
-		await this.typedPlugin.saveSettings();
+		(this.plugin.settings as unknown as Record<string, unknown>)[key] = value;
+		await this.plugin.saveSettings();
 		this.refreshDomState();
 	}
 
 	private openAddFeed(): void {
 		new AddFeedModal(this.app, {
-			settings: this.typedPlugin.settings,
-			makeSource: (input: string) => this.typedPlugin.makeSource(input),
+			settings: this.plugin.settings,
+			makeSource: (input: string) => this.plugin.makeSource(input),
 			onSave: async (feed: FeedConfig) => {
-				this.typedPlugin.settings.feeds.push(feed);
-				await this.typedPlugin.saveSettings();
+				this.plugin.settings.feeds.push(feed);
+				await this.plugin.saveSettings();
 				this.update();
 			},
 		}).open();
 	}
 
 	private removeFeed(index: number): void {
-		const feeds = this.typedPlugin.settings.feeds;
+		const feeds = this.plugin.settings.feeds;
 		if (index < 0 || index >= feeds.length) {
 			return;
 		}
 		feeds.splice(index, 1);
-		void this.typedPlugin.saveSettings();
+		void this.plugin.saveSettings();
 		this.update();
 	}
 
-	/** Exposed for the feed editor page to reach the plugin instance. */
-	get plugin(): RssImporterPluginLike {
-		return this.typedPlugin;
-	}
 }
 
 // A navigable sub-page for editing one feed's metadata. SettingPage.display()
