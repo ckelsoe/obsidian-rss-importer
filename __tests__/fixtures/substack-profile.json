@@ -1,0 +1,29 @@
+{
+	"id": 143604767,
+	"name": "Kevin Potter",
+	"handle": "lxxwriter",
+	"primaryPublication": {
+		"id": 6714120,
+		"subdomain": "lxxscrolls",
+		"custom_domain": "the.lxxscrolls.com",
+		"custom_domain_optional": false,
+		"name": "The LXX Scrolls",
+		"author_id": 143604767
+	},
+	"publicationUsers": [
+		{
+			"id": 6851817,
+			"user_id": 143604767,
+			"publication_id": 6714120,
+			"role": "admin",
+			"is_primary": true,
+			"publication": {
+				"id": 6714120,
+				"name": "The LXX Scrolls",
+				"subdomain": "lxxscrolls",
+				"custom_domain": "the.lxxscrolls.com"
+			}
+		}
+	],
+	"subdomainUrl": "https://lxxwriter.substack.com"
+}

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+	<title>Example Atom feed</title>
+	<link href="https://example.com/" rel="alternate"/>
+	<link href="https://example.com/feed.atom" rel="self"/>
+	<updated>2026-06-12T18:30:00Z</updated>
+	<entry>
+		<title>An Atom entry with a body</title>
+		<id>urn:uuid:1225c695-cfb8-4ebb-aaaa-80da344efa6a</id>
+		<link href="https://example.com/posts/first" rel="alternate"/>
+		<link href="https://example.com/audio/first.mp3" rel="enclosure" type="audio/mpeg" length="12345"/>
+		<published>2026-06-10T09:00:00Z</published>
+		<updated>2026-06-11T10:15:00Z</updated>
+		<author>
+			<name>Ada Lovelace</name>
+		</author>
+		<category term="essays"/>
+		<category term="history"/>
+		<summary>A short Atom summary line.</summary>
+		<content type="html"><![CDATA[<p>The full Atom body content lives here.</p>]]></content>
+	</entry>
+</feed>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+	xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	xmlns:dc="http://purl.org/dc/elements/1.1/"
+	xmlns:atom="http://www.w3.org/2005/Atom"
+	xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+	<channel>
+		<title>The God Journey</title>
+		<atom:link href="https://www.thegodjourney.com/feed/podcast" rel="self" type="application/rss+xml" />
+		<link>https://www.thegodjourney.com</link>
+		<description>The adventure of living loved</description>
+		<item>
+			<title>Patriarchy diminishes us all (#1039)</title>
+			<link>https://www.thegodjourney.com/2026/06/12/patriarchy-diminishes-us-all-1039/</link>
+			<pubDate>Fri, 12 Jun 2026 13:30:16 +0000</pubDate>
+			<guid isPermaLink="false">https://www.thegodjourney.com/?p=31764</guid>
+			<dc:creator><![CDATA[Wayne Jacobsen]]></dc:creator>
+			<category><![CDATA[Show content]]></category>
+			<category><![CDATA[patriarchy]]></category>
+			<description><![CDATA[<p>Wayne, Kyle, and Joni continue their conversation about patriarchy.</p>]]></description>
+			<enclosure url="https://media.blubrry.com/the_god_journey/www.thegodjourney.com/audio/2026/260612.mp3" length="43990159" type="audio/mpeg" />
+			<itunes:season>22</itunes:season>
+			<itunes:episode>23</itunes:episode>
+			<itunes:title>Patriarchy diminishes us all (#1039)</itunes:title>
+		</item>
+	</channel>
+</rss>
