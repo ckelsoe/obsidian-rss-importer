@@ -362,6 +362,14 @@ export class ImportModal extends Modal {
 			// Refresh the index and re-render so imported items lose their
 			// checkbox and gain the imported badge.
 			this.vaultIndex = buildFeedItemIndex(this.app, this.deps.feed.destinationFolder);
+			// metadataCache updates asynchronously, so notes written this run may not
+			// be in the rebuilt index yet. Mark them imported directly from the result
+			// so their badge flips immediately without reopening the importer.
+			for (const result of tally.results) {
+				if (result.status === "created" || result.status === "overwritten") {
+					this.vaultIndex.set(result.item.id, { path: result.path ?? "" });
+				}
+			}
 			// Drop now-imported items from the selection so the count stays right.
 			for (const id of Array.from(this.selectedIds)) {
 				if (this.vaultIndex.has(id)) {
@@ -418,20 +426,24 @@ export class ImportModal extends Modal {
 		}
 		el.empty();
 
-		const counts = el.createDiv({ cls: "rss-importer-summary-counts" });
-		counts.createSpan({
-			cls: "rss-importer-summary-line",
+		el.createDiv({
+			cls: "rss-importer-summary-counts",
 			text: `${tally.created} created, ${tally.overwritten} overwritten, ${tally.skipped} skipped, ${tally.failed} failed`,
 		});
 
-		const list = el.createEl("ul", { cls: "rss-importer-summary-list" });
-		for (const result of tally.results) {
-			const li = list.createEl("li", { cls: `rss-importer-summary-item is-${result.status}` });
-			const title = result.item.title.length > 0 ? result.item.title : "(untitled)";
-			li.createSpan({ cls: "rss-importer-summary-status", text: result.status });
-			li.createSpan({ cls: "rss-importer-summary-title", text: title });
-			if (result.reason !== null && result.reason.length > 0) {
-				li.createSpan({ cls: "rss-importer-summary-reason", text: result.reason });
+		// Successes are reflected by the imported badge in the list above, so the
+		// summary only details failures. This keeps it compact instead of listing
+		// every item.
+		const failures = tally.results.filter((result) => result.status === "failed");
+		if (failures.length > 0) {
+			const list = el.createEl("ul", { cls: "rss-importer-summary-list" });
+			for (const result of failures) {
+				const li = list.createEl("li", { cls: "rss-importer-summary-item is-failed" });
+				const title = result.item.title.length > 0 ? result.item.title : "(untitled)";
+				li.createSpan({ cls: "rss-importer-summary-title", text: title });
+				if (result.reason !== null && result.reason.length > 0) {
+					li.createSpan({ cls: "rss-importer-summary-reason", text: result.reason });
+				}
 			}
 		}
 	}
