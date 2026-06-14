@@ -1,0 +1,11 @@
+{
+	"id": "rss-importer",
+	"name": "RSS Importer",
+	"version": "0.1.0",
+	"minAppVersion": "1.13.0",
+	"description": "Import articles and podcasts from RSS, Atom, and Substack feeds into your vault as Markdown notes, organized by source feed and deduplicated by note identity.",
+	"author": "Charles Kelsoe (ckelsoe)",
+	"authorUrl": "https://github.com/ckelsoe",
+	"fundingUrl": "https://buymeacoffee.com/ckelsoe",
+	"isDesktopOnly": true
+}
