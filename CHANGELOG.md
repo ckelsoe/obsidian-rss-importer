@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.0] - 2026-06-14
+## [0.1.1] - 2026-06-14
+
+### Fixed
+- Plugin failed to load on enable. The settings tab declared a getter-only `plugin` accessor, which collided with the base class assigning `this.plugin` during construction, so the plugin was disabled before any commands or UI registered. The settings tab now uses a plain typed field.
+- The Add feed dialog's Save button did nothing. It mixed two ways of toggling the disabled state and required a separate Resolve click first. Save now resolves the feed on demand and saves it, and is never stuck disabled.
+- A failure during load now shows a Notice instead of failing silently, so a future load error is visible without opening the developer console.
 
 ### Added
 - Initial release: import articles and podcasts from RSS, Atom, and Substack feeds into the vault as Markdown notes.
