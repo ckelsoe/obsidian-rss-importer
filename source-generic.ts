@@ -62,8 +62,16 @@ export class GenericRssFeedSource implements FeedSource {
 	 * honoring `opts.limit`. The base mapping pulls the body fallback
 	 * (content:encoded, else description), so generic items usually carry their
 	 * `contentHtml` inline, but it stays null when the feed provides no body.
+	 *
+	 * Generic RSS has no archive paging API: a plain feed exposes only the recent
+	 * window in its XML and nothing older. So a positive `opts.offset` (the
+	 * archive-backfill request) returns no items rather than re-fetching the same
+	 * window. The Substack source overrides this with a real archive page.
 	 */
 	async listItems(feed: ResolvedFeed, opts?: ListItemsOptions): Promise<FeedItem[]> {
+		if (opts?.offset !== undefined && opts.offset > 0) {
+			return [];
+		}
 		const parsed = await fetchAndParseFeed(this.fetcher, feed.feedUrl);
 		const items = parsed.items.map((raw) => mapRawItemToFeedItem(raw, feed.feedId));
 		return applyLimit(items, opts?.limit);

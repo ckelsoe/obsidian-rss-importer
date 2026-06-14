@@ -12,7 +12,11 @@ import {
 	buildResolvedFeed,
 	fetchAndParseFeed,
 	FeedFetchError,
+	hostAndSlugFromPostUrl,
+	mapArchivePayload,
+	mapArchivePostToFeedItem,
 	mapRawItemToFeedItem,
+	readPostBodyHtml,
 } from "../source-common";
 
 const FIXTURES = join(__dirname, "fixtures");
@@ -290,6 +294,137 @@ describe("buildResolvedFeed", () => {
 		});
 		expect(feed.sampleTitles).toEqual([]);
 		expect(feed.author).toBeNull();
+	});
+});
+
+describe("mapArchivePostToFeedItem", () => {
+	const HOST = "kevin.substack.com";
+	const FEED_ID = "kevin.substack.com";
+
+	it("maps id from the numeric id, url from canonical_url, and a null body", () => {
+		const post = {
+			id: 555,
+			slug: "the-slug",
+			title: "An archive post",
+			post_date: "2024-12-01T08:00:00.000Z",
+			canonical_url: "https://kevin.substack.com/p/the-slug",
+			audience: "everyone",
+			type: "newsletter",
+			section_name: "Notes",
+			postTags: [{ name: "x" }],
+			publishedBylines: [{ name: "Kevin" }],
+		};
+		const item = mapArchivePostToFeedItem(post, FEED_ID, HOST);
+		expect(item).not.toBeNull();
+		expect(item?.id).toBe("555");
+		expect(item?.url).toBe("https://kevin.substack.com/p/the-slug");
+		expect(item?.author).toBe("Kevin");
+		expect(item?.audience).toBe("free");
+		expect(item?.section).toBe("Notes");
+		expect(item?.kind).toBe("article");
+		expect(item?.contentHtml).toBeNull();
+		expect(item?.sourceId).toBe(FEED_ID);
+	});
+
+	it("maps only_paid to paid and type podcast to kind podcast", () => {
+		const post = {
+			id: 1,
+			slug: "pod",
+			title: "Pod",
+			canonical_url: "https://kevin.substack.com/p/pod",
+			audience: "only_paid",
+			type: "podcast",
+		};
+		const item = mapArchivePostToFeedItem(post, FEED_ID, HOST);
+		expect(item?.audience).toBe("paid");
+		expect(item?.kind).toBe("podcast");
+	});
+
+	it("falls back to id=canonical_url when the numeric id is absent", () => {
+		const post = {
+			slug: "no-id",
+			title: "No id",
+			canonical_url: "https://kevin.substack.com/p/no-id",
+		};
+		const item = mapArchivePostToFeedItem(post, FEED_ID, HOST);
+		expect(item?.id).toBe("https://kevin.substack.com/p/no-id");
+	});
+
+	it("builds the url from host+slug when canonical_url is absent", () => {
+		const post = { id: 9, slug: "from-slug", title: "From slug" };
+		const item = mapArchivePostToFeedItem(post, FEED_ID, HOST);
+		expect(item?.url).toBe("https://kevin.substack.com/p/from-slug");
+		expect(item?.id).toBe("9");
+	});
+
+	it("returns null when neither an id nor a canonical_url is present", () => {
+		expect(mapArchivePostToFeedItem({ title: "x" }, FEED_ID, HOST)).toBeNull();
+		expect(mapArchivePostToFeedItem(null, FEED_ID, HOST)).toBeNull();
+		expect(mapArchivePostToFeedItem(42, FEED_ID, HOST)).toBeNull();
+	});
+
+	it("tolerates malformed tag and byline entries", () => {
+		const post = {
+			id: 2,
+			canonical_url: "https://kevin.substack.com/p/two",
+			postTags: [{ name: "ok" }, {}, "nope", { name: "" }],
+			publishedBylines: ["nope"],
+		};
+		const item = mapArchivePostToFeedItem(post, FEED_ID, HOST);
+		expect(item?.tags).toEqual(["ok"]);
+		expect(item?.author).toBeNull();
+	});
+});
+
+describe("mapArchivePayload", () => {
+	it("skips malformed entries but keeps the well-formed ones", () => {
+		const payload = [
+			{ title: "no identity" },
+			{ id: 1, canonical_url: "https://h.test/p/a", title: "A" },
+			null,
+			{ id: 2, canonical_url: "https://h.test/p/b", title: "B" },
+		];
+		const items = mapArchivePayload(payload, "h.test", "h.test");
+		expect(items.map((i) => i.id)).toEqual(["1", "2"]);
+	});
+
+	it("returns an empty list for a non-array payload", () => {
+		expect(mapArchivePayload(null, "h.test", "h.test")).toEqual([]);
+		expect(mapArchivePayload({ not: "an array" }, "h.test", "h.test")).toEqual([]);
+	});
+});
+
+describe("readPostBodyHtml", () => {
+	it("reads a non-empty body_html string", () => {
+		expect(readPostBodyHtml({ body_html: "<p>x</p>" })).toBe("<p>x</p>");
+	});
+
+	it("returns null for a missing, empty, or non-string body_html", () => {
+		expect(readPostBodyHtml({})).toBeNull();
+		expect(readPostBodyHtml({ body_html: "" })).toBeNull();
+		expect(readPostBodyHtml({ body_html: 5 })).toBeNull();
+		expect(readPostBodyHtml(null)).toBeNull();
+	});
+});
+
+describe("hostAndSlugFromPostUrl", () => {
+	it("extracts host and slug from a /p/<slug> permalink", () => {
+		expect(hostAndSlugFromPostUrl("https://kevin.substack.com/p/the-slug")).toEqual({
+			host: "kevin.substack.com",
+			slug: "the-slug",
+		});
+	});
+
+	it("ignores trailing path and query after the slug", () => {
+		expect(
+			hostAndSlugFromPostUrl("https://kevin.substack.com/p/the-slug/comments?x=1"),
+		).toEqual({ host: "kevin.substack.com", slug: "the-slug" });
+	});
+
+	it("returns null for a url with no /p/<slug> segment or an unparsable url", () => {
+		expect(hostAndSlugFromPostUrl("https://kevin.substack.com/about")).toBeNull();
+		expect(hostAndSlugFromPostUrl("not a url")).toBeNull();
+		expect(hostAndSlugFromPostUrl("")).toBeNull();
 	});
 });
 

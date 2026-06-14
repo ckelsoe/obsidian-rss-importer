@@ -101,6 +101,26 @@ describe("GenericRssFeedSource", () => {
 		expect(items[0]?.title).toBe("Patriarchy diminishes us all (#1039)");
 	});
 
+	it("listItems() with a positive offset returns no items (no archive paging)", async () => {
+		const { fetcher, urls } = feedFetcher(fixture("generic-multi.xml"));
+		const source = new GenericRssFeedSource({ fetcher, resolver: new FeedResolver(fetcher) });
+		const feed: ResolvedFeed = {
+			sourceType: "generic",
+			feedId: "www.thegodjourney.com",
+			canonicalHost: "www.thegodjourney.com",
+			feedUrl: "https://www.thegodjourney.com/feed",
+			publicationTitle: "The God Journey",
+			author: null,
+			sampleTitles: [],
+			audienceHint: "unknown",
+		};
+		const items = await source.listItems(feed, { offset: 20, limit: 12 });
+		// Generic feeds expose no archive, so a backfill request yields nothing and
+		// makes no fetch (it short-circuits before touching the feed URL).
+		expect(items).toEqual([]);
+		expect(urls).toHaveLength(0);
+	});
+
 	it("fetchBody() returns the already-populated item unchanged", async () => {
 		const source = buildSource(fixture("generic-multi.xml"));
 		const feed: ResolvedFeed = {

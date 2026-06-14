@@ -89,6 +89,14 @@ export interface ResolvedFeed {
 export interface ListItemsOptions {
 	/** Soft cap on items to enumerate. Sources may return fewer. */
 	limit?: number;
+	/**
+	 * Soft paging offset for archive backfill. `undefined` or 0 means the recent
+	 * RSS window (the default current behavior). A value > 0 asks the source to
+	 * page back into older items beyond the RSS window. Only sources with an
+	 * archive API (Substack) honor this; sources without one return no items for
+	 * a positive offset.
+	 */
+	offset?: number;
 }
 
 /**

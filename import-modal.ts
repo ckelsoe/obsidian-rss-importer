@@ -23,6 +23,9 @@ import type { ImportedRecord } from "./vault-index";
 /** Soft cap on how many items to enumerate for the modal list. */
 const LIST_ITEM_LIMIT = 50;
 
+/** How many older items one "Load older" click pulls from the archive. */
+const LOAD_OLDER_PAGE_SIZE = 12;
+
 export type ItemBadgeState = "imported" | "dismissed" | "available";
 
 export interface ImportModalDeps {
@@ -85,6 +88,14 @@ export class ImportModal extends Modal {
 
 	private aborted = false;
 	private importing = false;
+	// True while a "Load older" archive page is in flight, so a second click is
+	// ignored and the button shows a loading state.
+	private loadingOlder = false;
+	// False once an archive page returns no new items, so the button stays hidden
+	// rather than re-offering a page that yields nothing.
+	private hasMoreOlder = true;
+	// Where the next archive page starts. Grows by the number of items currently
+	// loaded so each click pages further back.
 	private items: FeedItem[] = [];
 	private vaultIndex: Map<string, ImportedRecord> = new Map();
 	private readonly rows: ItemRow[] = [];
@@ -94,6 +105,8 @@ export class ImportModal extends Modal {
 	private readonly selectedIds = new Set<string>();
 
 	private listEl: HTMLDivElement | null = null;
+	private loadOlderEl: HTMLDivElement | null = null;
+	private loadOlderButtonEl: HTMLButtonElement | null = null;
 	private progressEl: HTMLDivElement | null = null;
 	private summaryEl: HTMLDivElement | null = null;
 	private importButtonEl: HTMLButtonElement | null = null;
@@ -116,6 +129,23 @@ export class ImportModal extends Modal {
 
 		this.listEl = contentEl.createDiv({ cls: "rss-importer-item-list" });
 		this.renderListMessage("Loading items…");
+
+		// Archive backfill is Substack-only: generic feeds expose no older items
+		// beyond the recent window, so the control is created only for Substack.
+		if (this.deps.feed.sourceType === "substack") {
+			this.loadOlderEl = contentEl.createDiv({ cls: "rss-importer-load-older" });
+			const olderBtn = this.loadOlderEl.createEl("button", {
+				cls: "rss-importer-load-older-button",
+				text: "Load older",
+				attr: { type: "button" },
+			});
+			olderBtn.addEventListener("click", () => {
+				void this.loadOlder();
+			});
+			this.loadOlderButtonEl = olderBtn;
+			// Hidden until the first page of items has loaded.
+			this.loadOlderEl.toggleClass("is-hidden", true);
+		}
 
 		this.progressEl = contentEl.createDiv({ cls: "rss-importer-progress" });
 		this.summaryEl = contentEl.createDiv({ cls: "rss-importer-summary" });
@@ -150,6 +180,8 @@ export class ImportModal extends Modal {
 			window.clearTimeout(this.focusTimer);
 			this.focusTimer = null;
 		}
+		this.loadOlderEl = null;
+		this.loadOlderButtonEl = null;
 		this.contentEl.empty();
 	}
 
@@ -165,11 +197,77 @@ export class ImportModal extends Modal {
 			this.items = items;
 			this.vaultIndex = buildFeedItemIndex(this.app, this.deps.feed.destinationFolder);
 			this.renderItems();
+			this.refreshLoadOlder();
 		} catch (err) {
 			this.renderListMessage("Could not load this feed's items.");
 			new Notice("Could not load this feed. See the console for details.");
 			console.error(err);
 		}
+	}
+
+	// Append a page of older items from the Substack archive. Each page starts at
+	// the current item count (a soft offset), so successive clicks page further
+	// back. New ids not already present are appended; the selection set is
+	// preserved across the re-render. Failures show a Notice and never leave the
+	// button stuck disabled. When a page yields no new items the button hides and
+	// reads "No older items".
+	private async loadOlder(): Promise<void> {
+		if (this.loadingOlder) {
+			return;
+		}
+		this.loadingOlder = true;
+		this.refreshLoadOlder();
+		try {
+			const resolved = buildResolvedFeedFromConfig(this.deps.feed);
+			const page = await this.deps.source.listItems(resolved, {
+				offset: this.items.length,
+				limit: LOAD_OLDER_PAGE_SIZE,
+			});
+			if (this.aborted) {
+				return;
+			}
+
+			const existing = new Set(this.items.map((it) => it.id));
+			let added = 0;
+			for (const item of page) {
+				if (existing.has(item.id)) {
+					continue;
+				}
+				existing.add(item.id);
+				this.items.push(item);
+				added += 1;
+			}
+
+			if (added === 0) {
+				this.hasMoreOlder = false;
+			}
+			this.renderItems();
+		} catch (err) {
+			new Notice("Could not load older items. See the console for details.");
+			console.error(err);
+		} finally {
+			this.loadingOlder = false;
+			this.refreshLoadOlder();
+		}
+	}
+
+	// Reflect the current load-older state onto the button: hidden when there are
+	// no more older items, disabled and relabeled while a page is loading.
+	private refreshLoadOlder(): void {
+		const wrap = this.loadOlderEl;
+		const btn = this.loadOlderButtonEl;
+		if (wrap === null || btn === null) {
+			return;
+		}
+		if (!this.hasMoreOlder) {
+			wrap.toggleClass("is-hidden", false);
+			btn.toggleAttribute("disabled", true);
+			btn.setText("No older items");
+			return;
+		}
+		wrap.toggleClass("is-hidden", false);
+		btn.toggleAttribute("disabled", this.loadingOlder);
+		btn.setText(this.loadingOlder ? "Loading…" : "Load older");
 	}
 
 	private renderListMessage(message: string): void {
