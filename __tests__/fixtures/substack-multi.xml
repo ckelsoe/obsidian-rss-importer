@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+	<channel>
+		<title><![CDATA[Coach Jon McLernon]]></title>
+		<description><![CDATA[Faith, struggle, and transformation.]]></description>
+		<link>https://jonathanmclernon.substack.com</link>
+		<item>
+			<title><![CDATA[A free post anyone can read]]></title>
+			<description><![CDATA[The teaser line for the free post.]]></description>
+			<link>https://jonathanmclernon.substack.com/p/a-free-post</link>
+			<guid isPermaLink="false">https://jonathanmclernon.substack.com/p/a-free-post</guid>
+			<dc:creator><![CDATA[Jonathan McLernon]]></dc:creator>
+			<pubDate>Sun, 14 Jun 2026 14:24:30 GMT</pubDate>
+			<category><![CDATA[Faith]]></category>
+			<content:encoded><![CDATA[<div class="body"><p>This is the complete free body of the post. It is fully readable from the public RSS feed because the author published it to everyone, so there is no paywall container anywhere in the markup and the reader gets the whole thing.</p><p>The full text continues here with the second paragraph that develops the idea further so the body is unmistakably a complete article rather than a short lead-in teaser.</p></div>]]></content:encoded>
+		</item>
+		<item>
+			<title><![CDATA[A paid post that only shows a teaser]]></title>
+			<description><![CDATA[The teaser line for the paid post.]]></description>
+			<link>https://jonathanmclernon.substack.com/p/a-paid-post</link>
+			<guid isPermaLink="false">https://jonathanmclernon.substack.com/p/a-paid-post</guid>
+			<dc:creator><![CDATA[Jonathan McLernon]]></dc:creator>
+			<pubDate>Sat, 13 Jun 2026 09:00:00 GMT</pubDate>
+			<category><![CDATA[Faith]]></category>
+			<content:encoded><![CDATA[<div class="body"><p>This is the visible lead-in to a paid post.</p><div class="paywall"><div class="subscription-widget show-subscribe"><p>This post is for paid subscribers</p><a class="button primary" href="https://jonathanmclernon.substack.com/subscribe">Subscribe</a></div></div></div>]]></content:encoded>
+		</item>
+	</channel>
+</rss>
