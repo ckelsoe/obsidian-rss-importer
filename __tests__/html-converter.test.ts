@@ -138,6 +138,23 @@ describe("convertHtmlToMarkdown: widget stripping and degradation", () => {
 		const md = convertHtmlToMarkdown("<p>You can subscribe at the library for free.</p>");
 		expect(md).toContain("You can subscribe at the library for free.");
 	});
+
+	it("strips Substack app-install and subscribe embeds by data-component-name, keeping images and prose", () => {
+		const html =
+			'<div data-component-name="InstallSubstackAppToDOM" class="install-substack-app-embed">' +
+			'<p class="preamble">If you are reading this in email, the text may cut off. Get the app.</p>' +
+			'<a class="install-substack-app-embed-btn button primary" href="https://substack.com/app">Get the app</a></div>' +
+			"<p>The real article body that must be kept.</p>" +
+			'<div class="captioned-image-container"><img src="https://substackcdn.com/image/x.png" alt="A figure" /></div>' +
+			'<div data-component-name="SubscribeWidgetToDOM" class="subscription-widget show-subscribe">' +
+			'<a href="https://pub.substack.com/subscribe">Become a supporter</a></div>';
+		const md = convertHtmlToMarkdown(html);
+		expect(md).toContain("The real article body that must be kept.");
+		expect(md).toContain("https://substackcdn.com/image/x.png");
+		expect(md).not.toContain("Get the app");
+		expect(md).not.toContain("reading this in email");
+		expect(md).not.toContain("Become a supporter");
+	});
 });
 
 describe("convertHtmlToMarkdown: footnotes", () => {

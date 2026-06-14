@@ -99,6 +99,27 @@ const WIDGET_STRIP_KEYS: readonly string[] = [
 	"poll-embed",
 	"comments-button",
 	"footer-buttons",
+	// Substack email-truncation / "read in the app" promo and CTA form blocks.
+	"install-substack-app",
+	"subscription-widget",
+	"preamble",
+	"digest-post-embed",
+	"fake-input",
+	"fake-button",
+	"email-input",
+	"cta-caption",
+];
+
+/**
+ * `data-component-name` values Substack stamps on its embedded widgets. This is
+ * the most reliable marker for the subscribe form, the "read in the app" promo,
+ * and CTA buttons. `Image2ToDOM` (real captioned images) is deliberately NOT
+ * listed so images are preserved. Matched exactly (not substring).
+ */
+const WIDGET_STRIP_COMPONENTS: readonly string[] = [
+	"SubscribeWidgetToDOM",
+	"InstallSubstackAppToDOM",
+	"ButtonCreateButton",
 ];
 
 /**
@@ -153,6 +174,10 @@ function classMatchesAny(node: ClassedElement, keys: readonly string[]): boolean
 
 /** Known subscribe/share/button widget: removed outright. */
 function isStripWidget(node: ClassedElement): boolean {
+	const component = node.getAttribute("data-component-name");
+	if (component !== null && WIDGET_STRIP_COMPONENTS.includes(component)) {
+		return true;
+	}
 	return classMatchesAny(node, WIDGET_STRIP_KEYS);
 }
 
