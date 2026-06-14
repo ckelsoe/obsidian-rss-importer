@@ -1,6 +1,7 @@
 import type { FeedItem } from "../feed-source";
 import type { NoteWriter, WriteOutcome } from "../note-writer";
 import { NoteWriterCancelledError } from "../note-writer";
+import type { DebugEvent, DebugEventInput, DebugLogger } from "../debug-logger";
 import {
 	ImportRunner,
 	formatImportNotice,
@@ -8,6 +9,26 @@ import {
 	type ImportProgress,
 	type ImportTally,
 } from "../import-runner";
+
+/** Recording debug logger stub: captures every logged event for assertions. */
+function makeDebugLogger(): { logger: DebugLogger; events: DebugEventInput[] } {
+	const events: DebugEventInput[] = [];
+	const logger: DebugLogger = {
+		enabled: true,
+		setEnabled(): void {},
+		log(event: DebugEventInput): void {
+			events.push(event);
+		},
+		snapshot(): readonly DebugEvent[] {
+			return [];
+		},
+		clear(): void {},
+		format(): string {
+			return "";
+		},
+	};
+	return { logger, events };
+}
 
 // -----------------------------------------------------------------------------
 // Fixtures
@@ -300,6 +321,38 @@ describe("ImportRunner.run", () => {
 		await runner.run(items, {});
 
 		expect(calls[0]?.body).toBe("MD:");
+	});
+
+	it("emits a debug note (not a failure) when the imported body is empty", async () => {
+		const items = [makeItem({ id: "blank", title: "Blank Post" })];
+		// fetchBody yields a null body, so the converted markdown is empty.
+		const source: FeedSourceLike = {
+			fetchBody: (item) => Promise.resolve({ ...item, contentHtml: null }),
+		};
+		const { writer } = makeWriter(() =>
+			Promise.resolve({ status: "created", path: "Feeds/blank.md" }),
+		);
+		const { logger, events } = makeDebugLogger();
+
+		// A pass-through converter: an empty HTML body converts to an empty body.
+		const passthroughConvert = (html: string): string => html;
+		const runner = new ImportRunner({
+			source,
+			noteWriter: writer,
+			convert: passthroughConvert,
+			debugLogger: logger,
+		});
+		const tally = await runner.run(items, {});
+
+		// The empty body is still counted as created, not failed.
+		expect(tally.created).toBe(1);
+		expect(tally.failed).toBe(0);
+		// A diagnostic note records the empty body.
+		const emptyNote = events.find(
+			(e) => e.kind === "note" && e.message.includes("empty body"),
+		);
+		expect(emptyNote).toBeDefined();
+		expect(emptyNote?.message).toContain("Blank Post");
 	});
 
 	it("returns a zeroed tally for an empty item list", async () => {

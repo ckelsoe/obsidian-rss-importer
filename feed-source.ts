@@ -43,7 +43,11 @@ export interface FeedItem {
 	/** ISO 8601 timestamp, or null when the feed omits a date. */
 	publishedAt: string | null;
 	kind: FeedItemKind;
-	/** Full body (free) or teaser (paid). Null until `fetchBody` runs. */
+	/**
+	 * Full body (free) or teaser (paid). Null until `fetchBody` runs, and may
+	 * still be null afterwards when the feed provides no body for the item.
+	 * Callers must handle null (treat it as an empty body).
+	 */
 	contentHtml: string | null;
 	/** True when the body is a paywalled teaser rather than a complete post. */
 	isTruncated: boolean;
@@ -89,8 +93,10 @@ export interface ListItemsOptions {
 
 /**
  * A feed source. `resolve` classifies and canonicalizes an input; `listItems`
- * enumerates available items (bodies may be absent); `fetchBody` guarantees the
- * item's `contentHtml` is populated (full body when entitled, teaser otherwise).
+ * enumerates available items (bodies may be absent); `fetchBody` attempts to
+ * populate the item's `contentHtml` (full body when entitled, teaser otherwise).
+ * `contentHtml` may still be null after `fetchBody` when the feed provides no
+ * body for the item, so callers must handle a null body.
  */
 export interface FeedSource {
 	readonly type: SourceType;

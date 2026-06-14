@@ -149,10 +149,12 @@ export class ImageDownloader {
 	): Promise<string | null> {
 		const response = await this.fetcher({ url, method: "GET" });
 		if (response.status < 200 || response.status >= 300) {
+			console.error(`RSS Importer: image download skipped for ${url}: status ${response.status}`);
 			return null;
 		}
 		const bytes = response.arrayBuffer;
 		if (bytes.byteLength === 0) {
+			console.error(`RSS Importer: image download skipped for ${url}: empty body`);
 			return null;
 		}
 

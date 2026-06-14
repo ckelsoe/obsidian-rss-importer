@@ -101,6 +101,10 @@ export class ImportModal extends Modal {
 	}
 
 	onOpen(): void {
+		// Reset the abort flag once per modal open, not per import run, so a
+		// reused modal instance starts clean while a single open session keeps a
+		// consistent flag across loadItems and any number of runImport calls.
+		this.aborted = false;
 		const { contentEl } = this;
 		contentEl.empty();
 		contentEl.addClass("rss-importer-import-modal");
@@ -326,7 +330,6 @@ export class ImportModal extends Modal {
 		}
 
 		this.importing = true;
-		this.aborted = false;
 		this.refreshImportButton();
 		this.clearSummary();
 

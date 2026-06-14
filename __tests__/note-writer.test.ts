@@ -229,6 +229,39 @@ describe("composeNote", () => {
 		expect(note).not.toContain("substack-truncated");
 		expect(note).not.toContain("[!warning]");
 	});
+
+	it("links the episode media and records media-url for a podcast item", () => {
+		const mediaUrl = "https://media.example.com/ep/42.mp3";
+		const item = makeItem({
+			kind: "podcast",
+			mediaUrl,
+			mediaType: "audio/mpeg",
+		});
+		const note = composeNote(item, "BODY", {});
+		// Frontmatter records the force-quoted media URL.
+		expect(note).toContain(`media-url: "${mediaUrl}"`);
+		// Body links the episode audio.
+		expect(note).toContain(`[Episode audio](${mediaUrl})`);
+	});
+
+	it("labels non-podcast media as Media in the body link", () => {
+		const mediaUrl = "https://media.example.com/clip.mp4";
+		const item = makeItem({
+			kind: "article",
+			mediaUrl,
+			mediaType: "video/mp4",
+		});
+		const note = composeNote(item, "BODY", {});
+		expect(note).toContain(`media-url: "${mediaUrl}"`);
+		expect(note).toContain(`[Media](${mediaUrl})`);
+	});
+
+	it("omits media frontmatter and body link when there is no media", () => {
+		const note = composeNote(makeItem({ mediaUrl: null }), "BODY", {});
+		expect(note).not.toContain("media-url:");
+		expect(note).not.toContain("[Episode audio]");
+		expect(note).not.toContain("[Media]");
+	});
 });
 
 // -----------------------------------------------------------------------------
@@ -249,6 +282,17 @@ describe("extractFeedItemId", () => {
 		const note = composeNote(item, "BODY", {});
 		expect(note).toContain(`${FRONTMATTER_KEYS.feedItemId}: "null"`);
 		expect(extractFeedItemId(note)).toBe("null");
+	});
+
+	it("round-trips an id containing a literal backslash-n (two chars)", () => {
+		// The id is a backslash followed by the letter n, NOT a newline. The
+		// unescape order in extractFeedItemId must turn the escaped backslash back
+		// into one backslash before the \n rule runs, or this would corrupt into a
+		// real newline.
+		const literalBackslashN = "a\\nb";
+		const item = makeItem({ id: literalBackslashN });
+		const note = composeNote(item, "BODY", {});
+		expect(extractFeedItemId(note)).toBe(literalBackslashN);
 	});
 
 	it("returns null when there is no frontmatter", () => {

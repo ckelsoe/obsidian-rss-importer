@@ -397,6 +397,11 @@ const TRUNCATED_CALLOUT = [
  * When the item is a truncated teaser, a visible callout warning is prepended
  * to the body and a `substack-truncated: true` line is added to frontmatter so
  * the state is both human-visible and machine-queryable.
+ *
+ * When the item carries media (a podcast/audio/video enclosure), a `media-url`
+ * frontmatter line records it (force-quoted, since it is a URL) and a labelled
+ * link to the media is appended to the body so the episode is reachable from the
+ * note.
  */
 export function composeNote(
 	item: FeedItem,
@@ -421,15 +426,29 @@ export function composeNote(
 	if (tags.length > 0) {
 		lines.push(`${FRONTMATTER_KEYS.tags}: ${yamlTagArray(tags)}`);
 	}
+	// Media items (podcast episodes, attached audio/video) record their media URL
+	// in frontmatter. Force-quoted because it is a URL. Placed after tags and
+	// before the truncated marker.
+	const hasMedia = item.mediaUrl !== null && item.mediaUrl.length > 0;
+	if (hasMedia && item.mediaUrl !== null) {
+		lines.push(`media-url: ${yamlQuoted(item.mediaUrl)}`);
+	}
 	if (item.isTruncated) {
 		// Machine-readable marker alongside the visible callout below.
 		lines.push("substack-truncated: true");
 	}
 	lines.push("---");
 
-	const body = item.isTruncated
+	let body = item.isTruncated
 		? `${TRUNCATED_CALLOUT}\n\n${bodyMarkdown}`
 		: bodyMarkdown;
+
+	// Link the media at the end of the body so a podcast note plays its episode
+	// and any other media item is reachable from the note.
+	if (hasMedia && item.mediaUrl !== null) {
+		const label = item.kind === "podcast" ? "Episode audio" : "Media";
+		body = `${body}\n\n[${label}](${item.mediaUrl})`;
+	}
 
 	return `${lines.join("\n")}\n\n${body}`;
 }
@@ -474,13 +493,30 @@ export function extractFeedItemId(content: string): string | null {
 			(value.startsWith("'") && value.endsWith("'")))
 	) {
 		value = value.slice(1, -1);
-		// Unescape the standard double-quoted escapes we emit.
-		value = value
-			.replace(/\\"/g, '"')
-			.replace(/\\n/g, "\n")
-			.replace(/\\r/g, "\r")
-			.replace(/\\t/g, "\t")
-			.replace(/\\\\/g, "\\");
+		// Unescape the standard double-quoted escapes we emit, in a SINGLE pass.
+		// The escaped-backslash sequence `\\` must be consumed before the letter
+		// escapes, otherwise a literal backslash followed by "n" (written as `\\n`)
+		// would be misread as a newline. Sequential global replaces cannot do this
+		// safely: turning `\\` into `\` first leaves a `\n` that the next pass then
+		// rewrites to a newline. One left-to-right pass over each escape sequence
+		// matches `\\` as a unit and maps the rest by their following character.
+		value = value.replace(/\\(.)/g, (_match, next: string) => {
+			switch (next) {
+				case "\\":
+					return "\\";
+				case '"':
+					return '"';
+				case "n":
+					return "\n";
+				case "r":
+					return "\r";
+				case "t":
+					return "\t";
+				default:
+					// Unknown escape: drop the backslash, keep the character.
+					return next;
+			}
+		});
 	}
 	return value.length > 0 ? value : null;
 }

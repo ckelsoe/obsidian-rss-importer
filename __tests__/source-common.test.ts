@@ -204,6 +204,25 @@ describe("mapRawItemToFeedItem", () => {
 		expect(mapRawItemToFeedItem(raw, "host").id.length).toBeGreaterThan(0);
 	});
 
+	it("falls back to a derived id when guid is an empty string", () => {
+		// A present-but-empty guid is not a usable identity; the item must still
+		// get a non-empty deterministic id from its title.
+		const raw: RawFeedItem = {
+			guid: "",
+			link: null,
+			title: "A titled post",
+			author: null,
+			pubDateIso: null,
+			contentHtml: null,
+			description: null,
+			categories: [],
+			enclosure: null,
+		};
+		const id = mapRawItemToFeedItem(raw, "host").id;
+		expect(id.length).toBeGreaterThan(0);
+		expect(id).toContain("A titled post");
+	});
+
 	it("sets the conservative defaults a source may refine", () => {
 		const raw = firstRawItem("substack-item.xml");
 		const item = mapRawItemToFeedItem(raw, "host");

@@ -190,6 +190,17 @@ export class ImportRunner {
 				}
 			}
 
+			// An empty body is not a failure (the feed simply gave no content), but
+			// it is worth a diagnostic note so an unexpectedly blank note is
+			// traceable to a content-less feed rather than a conversion bug.
+			if (markdown.trim().length === 0) {
+				this.debug?.log({
+					kind: "note",
+					message: `Imported "${full.title}" with an empty body (feed provided no content)`,
+					endpoint: full.url,
+				});
+			}
+
 			const outcome = await this.noteWriter.writeNote(full, markdown, {
 				feedTags,
 			});

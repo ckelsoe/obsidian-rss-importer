@@ -160,15 +160,35 @@ describe("FeedResolver: Substack subdomain and post URLs", () => {
 		expect(result.handle).toBeNull();
 	});
 
-	it("classifies a Substack post URL (/p/<slug>) as substack with host/feed", async () => {
+	it("classifies a *.substack.com post URL (/p/<slug>) as substack with host/feed", async () => {
 		const { fetcher } = makeFetcher({
-			"https://the.lxxscrolls.com/feed": { status: 200, headers: { "Content-Type": "text/xml" } },
+			"https://kevin.substack.com/feed": { status: 200, headers: { "Content-Type": "text/xml" } },
+		});
+		const resolver = new FeedResolver(fetcher);
+
+		const result = await resolver.resolve("https://kevin.substack.com/p/daniel-6");
+
+		expect(result.sourceType).toBe("substack");
+		expect(result.canonicalHost).toBe("kevin.substack.com");
+		expect(result.feedUrl).toBe("https://kevin.substack.com/feed");
+	});
+
+	it("classifies a custom-domain post URL (/p/<slug>) as generic, not substack", async () => {
+		// A /p/<slug> path on a non-substack.com host is NOT claimed as Substack:
+		// custom-domain Substacks are added via @handle. Here the host's /feed
+		// probe returns XML, so it resolves as a generic feed.
+		const { fetcher } = makeFetcher({
+			"https://the.lxxscrolls.com/feed": {
+				status: 200,
+				headers: { "Content-Type": "text/xml" },
+				text: "<?xml version=\"1.0\"?><rss></rss>",
+			},
 		});
 		const resolver = new FeedResolver(fetcher);
 
 		const result = await resolver.resolve("https://the.lxxscrolls.com/p/daniel-6");
 
-		expect(result.sourceType).toBe("substack");
+		expect(result.sourceType).toBe("generic");
 		expect(result.canonicalHost).toBe("the.lxxscrolls.com");
 		expect(result.feedUrl).toBe("https://the.lxxscrolls.com/feed");
 	});

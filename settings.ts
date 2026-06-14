@@ -8,6 +8,7 @@
  */
 
 import type { SourceType } from "./feed-source";
+import type { DismissedMap } from "./dismiss-store";
 
 export type ImagesMode = "link" | "download";
 export type DuplicatePolicy = "skip" | "overwrite" | "prompt";
@@ -54,7 +55,7 @@ export interface RssImporterSettings {
 	showRibbonIcon: boolean;
 	ribbonIcon: string;
 	/** Dismissed items per feed: feedId -> array of feed-item-id. */
-	dismissed: Record<string, string[]>;
+	dismissed: DismissedMap;
 }
 
 export const DEFAULT_SETTINGS: RssImporterSettings = {

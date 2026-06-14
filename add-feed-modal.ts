@@ -213,9 +213,11 @@ export class AddFeedModal extends Modal {
 			return;
 		}
 		const resolved = this.resolved;
+		const folderRaw = this.folderInputEl?.value.trim() ?? "";
 		const destinationFolder =
-			this.folderInputEl?.value.trim() ??
-			defaultDestinationFolder(this.deps.settings.defaultParentFolder, resolved.publicationTitle);
+			folderRaw.length === 0
+				? defaultDestinationFolder(this.deps.settings.defaultParentFolder, resolved.publicationTitle)
+				: folderRaw;
 		const tags = parseTagsInput(this.tagsInputEl?.value ?? "");
 
 		const feed: FeedConfig = {
@@ -225,13 +227,7 @@ export class AddFeedModal extends Modal {
 			canonicalHost: resolved.canonicalHost,
 			publicationTitle: resolved.publicationTitle,
 			author: resolved.author,
-			destinationFolder:
-				destinationFolder.length === 0
-					? defaultDestinationFolder(
-							this.deps.settings.defaultParentFolder,
-							resolved.publicationTitle,
-						)
-					: destinationFolder,
+			destinationFolder,
 			tags,
 			tagNamespace: "",
 			importSourceTags: true,

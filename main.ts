@@ -1,10 +1,6 @@
 import {
-	App,
-	FuzzySuggestModal,
-	Modal,
 	Notice,
 	Plugin,
-	Setting,
 	requestUrl,
 	type RequestUrlResponse,
 } from "obsidian";
@@ -24,7 +20,6 @@ import { FetchPacer } from "./fetch-pacer";
 import {
 	NoteWriter,
 	type DuplicatePromptCallback,
-	type DuplicatePromptContext,
 	type DuplicatePromptDecision,
 } from "./note-writer";
 import { convertHtmlToMarkdown } from "./html-converter";
@@ -34,6 +29,8 @@ import { BufferedDebugLogger } from "./debug-logger";
 import { ImportRunner } from "./import-runner";
 import { ImportModal } from "./import-modal";
 import { AddFeedModal } from "./add-feed-modal";
+import { FeedPickerModal } from "./feed-picker-modal";
+import { DuplicatePromptModal } from "./duplicate-prompt-modal";
 import { RssImporterSettingTab, type RssImporterPluginLike } from "./settings-tab";
 
 // Adapt Obsidian's requestUrl to the plugin's HttpFetcher contract. requestUrl
@@ -81,6 +78,17 @@ function runGuarded(action: string, fn: () => Promise<void>): void {
 		const detail = err instanceof Error ? err.message : "See the console for details.";
 		new Notice(`${action} failed. ${detail}`);
 	});
+}
+
+// Type guards for the per-feed literal-union fields read from data.json. Stored
+// settings are user-editable JSON, so a value can be missing or a wrong literal;
+// these narrow to the known unions before the value is trusted.
+function isImagesMode(value: unknown): value is import("./settings").ImagesMode {
+	return value === "link" || value === "download";
+}
+
+function isDuplicatePolicy(value: unknown): value is import("./settings").DuplicatePolicy {
+	return value === "skip" || value === "overwrite" || value === "prompt";
 }
 
 // Sync classification used only to pick which source resolves a freshly entered
@@ -165,6 +173,33 @@ export default class RssImporterPlugin extends Plugin implements RssImporterPlug
 		if (!Array.isArray(this.settings.feeds)) {
 			this.settings.feeds = [];
 		}
+
+		// Coerce the literal-union fields. data.json is user-editable, so a stored
+		// value can be a missing or invalid literal; fall back to the default for
+		// the top-level fields and drop invalid per-feed overrides so the default
+		// applies.
+		if (!isImagesMode(this.settings.imagesMode)) {
+			this.settings.imagesMode = DEFAULT_SETTINGS.imagesMode;
+		}
+		if (!isDuplicatePolicy(this.settings.duplicatePolicy)) {
+			this.settings.duplicatePolicy = DEFAULT_SETTINGS.duplicatePolicy;
+		}
+		for (const feed of this.settings.feeds) {
+			// The per-feed override fields are optional literal/string unions on
+			// FeedConfig, but data.json is user-editable so a stored value can be a
+			// wrong type. View the feed as a loose record to inspect and drop the
+			// bad override; deleting it makes the global default apply.
+			const record = feed as unknown as Record<string, unknown>;
+			if ("imagesMode" in record && !isImagesMode(record["imagesMode"])) {
+				delete record["imagesMode"];
+			}
+			if ("noteNameTemplate" in record && typeof record["noteNameTemplate"] !== "string") {
+				delete record["noteNameTemplate"];
+			}
+			if ("imageSubfolder" in record && typeof record["imageSubfolder"] !== "string") {
+				delete record["imageSubfolder"];
+			}
+		}
 	}
 
 	async saveSettings(): Promise<void> {
@@ -226,31 +261,45 @@ export default class RssImporterPlugin extends Plugin implements RssImporterPlug
 	}
 
 	private openImport(feed: FeedConfig): void {
-		const source = this.makeSourceForFeed(feed);
-		const noteWriter = new NoteWriter({
-			vault: this.app.vault,
-			destinationFolder: feed.destinationFolder,
-			noteNameTemplate: effectiveNoteNameTemplate(feed, this.settings),
-			onDuplicate: this.settings.duplicatePolicy,
-			promptOnDuplicate: this.promptOnDuplicate,
-		});
+		let runner: ImportRunner;
+		let source: FeedSource;
+		// NoteWriter construction throws when the destination folder contains a
+		// ".." segment that would escape the vault. That throw must not escape the
+		// command callback uncaught, so the whole synchronous wiring is guarded and
+		// the modal only opens on success.
+		try {
+			source = this.makeSourceForFeed(feed);
+			const noteWriter = new NoteWriter({
+				vault: this.app.vault,
+				destinationFolder: feed.destinationFolder,
+				noteNameTemplate: effectiveNoteNameTemplate(feed, this.settings),
+				onDuplicate: this.settings.duplicatePolicy,
+				promptOnDuplicate: this.promptOnDuplicate,
+			});
 
-		let processImages: ((markdown: string, item: import("./feed-source").FeedItem) => Promise<string>) | undefined;
-		if (effectiveImagesMode(feed, this.settings) === "download") {
-			const downloader = new ImageDownloader({ fetcher: this.makeFetcher(), vault: this.app.vault });
-			const subfolder = effectiveImageSubfolder(feed, this.settings);
-			const folderPath =
-				feed.destinationFolder === "" ? subfolder : `${feed.destinationFolder}/${subfolder}`;
-			processImages = (markdown) => downloader.downloadAndRewrite(markdown, folderPath);
+			let processImages: ((markdown: string, item: import("./feed-source").FeedItem) => Promise<string>) | undefined;
+			if (effectiveImagesMode(feed, this.settings) === "download") {
+				const downloader = new ImageDownloader({ fetcher: this.makeFetcher(), vault: this.app.vault });
+				const subfolder = effectiveImageSubfolder(feed, this.settings);
+				const folderPath =
+					feed.destinationFolder === "" ? subfolder : `${feed.destinationFolder}/${subfolder}`;
+				processImages = (markdown) => downloader.downloadAndRewrite(markdown, folderPath);
+			}
+
+			runner = new ImportRunner({
+				source,
+				noteWriter,
+				convert: convertHtmlToMarkdown,
+				processImages,
+				debugLogger: this.debugLogger,
+			});
+		} catch (err) {
+			console.error(err);
+			new Notice(
+				`Could not start import. ${err instanceof Error ? err.message : "See the console."}`,
+			);
+			return;
 		}
-
-		const runner = new ImportRunner({
-			source,
-			noteWriter,
-			convert: convertHtmlToMarkdown,
-			processImages,
-			debugLogger: this.debugLogger,
-		});
 
 		new ImportModal(this.app, {
 			feed,
@@ -299,90 +348,5 @@ export default class RssImporterPlugin extends Plugin implements RssImporterPlug
 			this.ribbonEl.remove();
 			this.ribbonEl = null;
 		}
-	}
-}
-
-// Picks which configured feed to import from when more than one exists.
-class FeedPickerModal extends FuzzySuggestModal<FeedConfig> {
-	private readonly feeds: FeedConfig[];
-	private readonly onChoose: (feed: FeedConfig) => void;
-
-	constructor(app: App, feeds: FeedConfig[], onChoose: (feed: FeedConfig) => void) {
-		super(app);
-		this.feeds = feeds;
-		this.onChoose = onChoose;
-		this.setPlaceholder("Pick a feed to import from");
-	}
-
-	getItems(): FeedConfig[] {
-		return this.feeds;
-	}
-
-	getItemText(feed: FeedConfig): string {
-		return feed.publicationTitle;
-	}
-
-	onChooseItem(feed: FeedConfig): void {
-		this.onChoose(feed);
-	}
-}
-
-// Asks the user whether to overwrite, skip, or cancel when a same-item note
-// already exists and the duplicate policy is "prompt".
-class DuplicatePromptModal extends Modal {
-	private readonly context: DuplicatePromptContext;
-	private readonly resolve: (decision: DuplicatePromptDecision) => void;
-	private decided = false;
-
-	constructor(
-		app: App,
-		context: DuplicatePromptContext,
-		resolve: (decision: DuplicatePromptDecision) => void,
-	) {
-		super(app);
-		this.context = context;
-		this.resolve = resolve;
-	}
-
-	onOpen(): void {
-		this.setTitle("Note already exists");
-		const { contentEl } = this;
-		contentEl.createEl("p", {
-			text: `A note for "${this.context.itemTitle}" already exists at ${this.context.targetPath}. Overwrite it?`,
-		});
-		new Setting(contentEl)
-			.addButton((btn) =>
-				btn
-					.setButtonText("Overwrite")
-					.setDestructive()
-					.onClick(() => {
-						this.settle("overwrite");
-					}),
-			)
-			.addButton((btn) =>
-				btn.setButtonText("Skip").onClick(() => {
-					this.settle("skip");
-				}),
-			)
-			.addButton((btn) =>
-				btn.setButtonText("Cancel import").onClick(() => {
-					this.settle("cancel");
-				}),
-			);
-	}
-
-	onClose(): void {
-		// Dismissing the modal without a choice cancels the import.
-		this.settle("cancel");
-		this.contentEl.empty();
-	}
-
-	private settle(decision: DuplicatePromptDecision): void {
-		if (this.decided) {
-			return;
-		}
-		this.decided = true;
-		this.resolve(decision);
-		this.close();
 	}
 }

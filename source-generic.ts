@@ -59,8 +59,9 @@ export class GenericRssFeedSource implements FeedSource {
 
 	/**
 	 * Fetch the feed and map every item onto the normalized `FeedItem` shape,
-	 * honoring `opts.limit`. The base mapping already pulls the body fallback, so
-	 * generic items come back with their `contentHtml` populated.
+	 * honoring `opts.limit`. The base mapping pulls the body fallback
+	 * (content:encoded, else description), so generic items usually carry their
+	 * `contentHtml` inline, but it stays null when the feed provides no body.
 	 */
 	async listItems(feed: ResolvedFeed, opts?: ListItemsOptions): Promise<FeedItem[]> {
 		const parsed = await fetchAndParseFeed(this.fetcher, feed.feedUrl);

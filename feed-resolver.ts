@@ -129,11 +129,6 @@ function isSubstackSubdomain(host: string): boolean {
 	return host.toLowerCase().endsWith(SUBSTACK_SUFFIX);
 }
 
-/** True when a path looks like a Substack post permalink (`/p/<slug>`). */
-function isSubstackPostPath(pathname: string): boolean {
-	return /^\/p\/[^/]+/.test(pathname);
-}
-
 /** True when a path ends in a recognized feed suffix. */
 function hasFeedPathSuffix(pathname: string): boolean {
 	const lower = pathname.replace(/\/$/, "").toLowerCase();
@@ -249,11 +244,12 @@ export class FeedResolver {
 	 * Dispatch order:
 	 *  1. A Substack handle (`@x`, `substack.com/@x`) -> profile API lookup.
 	 *  2. A URL whose host is `*.substack.com` -> Substack, feed at host/feed.
-	 *  3. A Substack post URL (`/p/<slug>`) on any host -> Substack, host/feed.
-	 *  4. A URL whose path already names a feed (`/feed`, `/rss`, ...) -> generic.
-	 *  5. Any other URL -> probe `host/feed`; XML means generic.
+	 *     A `/p/<slug>` post URL on a substack.com host falls in here; the same
+	 *     path on a custom domain does not (those are added via @handle).
+	 *  3. A URL whose path already names a feed (`/feed`, `/rss`, ...) -> generic.
+	 *  4. Any other URL -> probe `host/feed`; XML means generic.
 	 *
-	 * In cases 2 to 5 the canonical host is derived by walking redirects from
+	 * In cases 2 to 4 the canonical host is derived by walking redirects from
 	 * the candidate feed URL, so a publication that moved hosts resolves to
 	 * where its feed actually lives.
 	 */
@@ -276,7 +272,12 @@ export class FeedResolver {
 			throw new ResolveError(`Not a resolvable Substack input: ${trimmed}`);
 		}
 
-		if (isSubstackSubdomain(url.hostname) || isSubstackPostPath(url.pathname)) {
+		// A Substack post URL is recognized as Substack only on a substack.com
+		// host. A `/p/<slug>` path on a custom domain is NOT enough to claim
+		// Substack: a non-Substack site can use the same path shape. Custom-domain
+		// Substacks are added via the @handle path instead, which the profile API
+		// canonicalizes correctly.
+		if (isSubstackSubdomain(url.hostname)) {
 			return this.resolveSubstackHost(url.hostname, null);
 		}
 
@@ -386,7 +387,7 @@ export class FeedResolver {
 	 */
 	private async walkRedirects(startUrl: string): Promise<{ finalUrl: URL; response: HttpResponse }> {
 		let current = parseUrl(startUrl);
-		for (let hop = 0; hop <= MAX_REDIRECT_HOPS; hop += 1) {
+		for (let hop = 0; hop < MAX_REDIRECT_HOPS; hop += 1) {
 			let response: HttpResponse;
 			try {
 				response = await this.fetcher({ url: current.toString() });
