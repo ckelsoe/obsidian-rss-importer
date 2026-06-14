@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-06-14
+
+### Added
+- Per-feed cleanup rules that strip promotional clutter from note bodies, matched by link target and structure rather than by wording (so they keep working when the text changes). Each feed can list link hosts (for example `buymeacoffee.com`, `substack.com/app`, `/subscribe`) whose short call-to-action or footer blocks are removed, plus an optional "trim after the last horizontal rule" to drop a trailing footer region. A long paragraph that merely cites one of those links is preserved. Rules apply during import and through a new "Clean up imported notes" command that re-cleans a feed's existing notes (frontmatter left untouched).
+
 ## [0.3.0] - 2026-06-14
 
 ### Added
