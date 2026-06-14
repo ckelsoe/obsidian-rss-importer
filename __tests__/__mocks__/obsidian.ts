@@ -116,6 +116,21 @@ export class PluginSettingTab {
 	}
 	display(): void {}
 	hide(): void {}
+	update(): void {}
+	refreshDomState(): void {}
+	getControlValue(_key: string): unknown {
+		return undefined;
+	}
+	setControlValue(_key: string, _value: unknown): void {}
+}
+
+export abstract class SettingPage {
+	rootEl: ChainableStub = new ChainableStub();
+	titlebarEl: ChainableStub = new ChainableStub();
+	containerEl: ChainableStub = new ChainableStub();
+	title = "";
+	abstract display(): void;
+	hide(): void {}
 }
 
 export class Setting {

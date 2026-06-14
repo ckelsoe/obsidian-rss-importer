@@ -1,1 +1,353 @@
 /* RSS Importer styles. Selectors use Obsidian theme variables; no inline styles, no !important. */
+
+/* -------------------------------------------------------------------------- */
+/* Stacked rows: label and description on top, control area full-width below.  */
+/* -------------------------------------------------------------------------- */
+
+.rss-importer-stacked-row {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-2);
+	padding: var(--size-4-3) 0;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.rss-importer-stacked-row:first-child {
+	border-top: none;
+}
+
+.rss-importer-stacked-labels {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-2-1);
+}
+
+.rss-importer-stacked-name {
+	font-weight: var(--font-semibold);
+	color: var(--text-normal);
+}
+
+.rss-importer-stacked-desc {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.rss-importer-stacked-content {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-2);
+	width: 100%;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Shared form controls.                                                       */
+/* -------------------------------------------------------------------------- */
+
+.rss-importer-text-input {
+	width: 100%;
+}
+
+.rss-importer-resolve-button {
+	align-self: flex-start;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Add-feed preview card.                                                      */
+/* -------------------------------------------------------------------------- */
+
+.rss-importer-preview {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-2);
+	padding: var(--size-4-3);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	background-color: var(--background-secondary);
+}
+
+.rss-importer-preview.is-empty,
+.rss-importer-preview.is-error {
+	color: var(--text-muted);
+}
+
+.rss-importer-preview.is-error {
+	border-color: var(--text-error);
+	color: var(--text-error);
+}
+
+.rss-importer-preview-hint {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.rss-importer-preview-header {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	flex-wrap: wrap;
+}
+
+.rss-importer-preview-title {
+	font-weight: var(--font-semibold);
+	color: var(--text-normal);
+}
+
+.rss-importer-preview-meta {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	flex-wrap: wrap;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.rss-importer-preview-samples {
+	margin: 0;
+	padding-left: var(--size-4-4);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.rss-importer-preview-samples li {
+	margin: var(--size-2-1) 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Source and audience badges.                                                 */
+/* -------------------------------------------------------------------------- */
+
+.rss-importer-source-badge,
+.rss-importer-audience-badge {
+	padding: var(--size-2-1) var(--size-2-3);
+	border-radius: var(--radius-s);
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-medium);
+	line-height: 1;
+}
+
+.rss-importer-source-substack {
+	background-color: var(--color-orange);
+	color: var(--text-on-accent);
+}
+
+.rss-importer-source-generic {
+	background-color: var(--background-modifier-border);
+	color: var(--text-normal);
+}
+
+.rss-importer-audience-free {
+	background-color: var(--color-green);
+	color: var(--text-on-accent);
+}
+
+.rss-importer-audience-paid {
+	background-color: var(--color-yellow);
+	color: var(--text-on-accent);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Import modal: item list and rows.                                           */
+/* -------------------------------------------------------------------------- */
+
+.rss-importer-item-list {
+	display: flex;
+	flex-direction: column;
+	max-height: 50vh;
+	overflow-y: auto;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	margin-bottom: var(--size-4-3);
+}
+
+.rss-importer-list-message {
+	padding: var(--size-4-4);
+	text-align: center;
+	color: var(--text-muted);
+}
+
+.rss-importer-item-row {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--size-4-2);
+	padding: var(--size-4-2) var(--size-4-3);
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.rss-importer-item-row:first-child {
+	border-top: none;
+}
+
+.rss-importer-item-row.is-imported,
+.rss-importer-item-row.is-dismissed {
+	color: var(--text-muted);
+}
+
+.rss-importer-item-select {
+	display: flex;
+	align-items: center;
+	min-width: var(--size-4-4);
+	padding-top: var(--size-2-1);
+}
+
+.rss-importer-item-main {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-2-2);
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.rss-importer-item-title {
+	color: var(--text-normal);
+	font-weight: var(--font-medium);
+	overflow-wrap: anywhere;
+}
+
+.rss-importer-item-row.is-imported .rss-importer-item-title,
+.rss-importer-item-row.is-dismissed .rss-importer-item-title {
+	color: var(--text-muted);
+}
+
+.rss-importer-item-meta {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	flex-wrap: wrap;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.rss-importer-item-truncated {
+	color: var(--text-warning);
+}
+
+.rss-importer-item-actions {
+	display: flex;
+	align-items: center;
+	flex: 0 0 auto;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Three-state badges.                                                         */
+/* -------------------------------------------------------------------------- */
+
+.rss-importer-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-2-1);
+	padding: var(--size-2-1) var(--size-2-3);
+	border-radius: var(--radius-s);
+	font-size: var(--font-ui-smaller);
+	line-height: 1;
+}
+
+.rss-importer-badge-icon {
+	display: inline-flex;
+	align-items: center;
+}
+
+.rss-importer-badge-icon .svg-icon {
+	width: var(--icon-xs);
+	height: var(--icon-xs);
+}
+
+.rss-importer-badge-imported {
+	background-color: var(--background-modifier-success);
+	color: var(--text-on-accent);
+}
+
+.rss-importer-badge-dismissed {
+	background-color: var(--background-modifier-border);
+	color: var(--text-muted);
+}
+
+.rss-importer-badge-available {
+	background-color: var(--background-secondary-alt);
+	color: var(--text-muted);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Progress line and summary.                                                  */
+/* -------------------------------------------------------------------------- */
+
+.rss-importer-progress {
+	min-height: 0;
+}
+
+.rss-importer-progress.is-active {
+	min-height: var(--size-4-6);
+	padding: var(--size-4-2) 0;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+}
+
+.rss-importer-summary {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-2);
+}
+
+.rss-importer-summary-counts {
+	font-weight: var(--font-medium);
+	color: var(--text-normal);
+}
+
+.rss-importer-summary-list {
+	margin: 0;
+	padding-left: 0;
+	list-style: none;
+	max-height: 30vh;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-2-2);
+}
+
+.rss-importer-summary-item {
+	display: flex;
+	align-items: baseline;
+	gap: var(--size-4-2);
+	font-size: var(--font-ui-smaller);
+}
+
+.rss-importer-summary-status {
+	flex: 0 0 auto;
+	min-width: var(--size-4-12);
+	font-variant: small-caps;
+	color: var(--text-muted);
+}
+
+.rss-importer-summary-item.is-created .rss-importer-summary-status {
+	color: var(--text-success);
+}
+
+.rss-importer-summary-item.is-overwritten .rss-importer-summary-status {
+	color: var(--text-accent);
+}
+
+.rss-importer-summary-item.is-failed .rss-importer-summary-status {
+	color: var(--text-error);
+}
+
+.rss-importer-summary-title {
+	flex: 1 1 auto;
+	min-width: 0;
+	color: var(--text-normal);
+	overflow-wrap: anywhere;
+}
+
+.rss-importer-summary-reason {
+	flex: 0 0 auto;
+	color: var(--text-muted);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Modal action rows.                                                          */
+/* -------------------------------------------------------------------------- */
+
+.rss-importer-modal-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--size-4-2);
+	margin-top: var(--size-4-3);
+}
