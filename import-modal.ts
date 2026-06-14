@@ -88,6 +88,10 @@ export class ImportModal extends Modal {
 	private items: FeedItem[] = [];
 	private vaultIndex: Map<string, ImportedRecord> = new Map();
 	private readonly rows: ItemRow[] = [];
+	// Selected item ids, kept independent of the checkbox DOM. Dismiss/undismiss
+	// and a post-import refresh rebuild the whole list, so the checkboxes cannot
+	// be the only record of the selection or it would be lost on every re-render.
+	private readonly selectedIds = new Set<string>();
 
 	private listEl: HTMLDivElement | null = null;
 	private progressEl: HTMLDivElement | null = null;
@@ -222,7 +226,15 @@ export class ImportModal extends Modal {
 				cls: "rss-importer-item-checkbox",
 				attr: { type: "checkbox" },
 			});
+			// Restore prior selection across re-renders.
+			checkbox.checked = this.selectedIds.has(item.id);
+			const box = checkbox;
 			checkbox.addEventListener("change", () => {
+				if (box.checked) {
+					this.selectedIds.add(item.id);
+				} else {
+					this.selectedIds.delete(item.id);
+				}
 				this.refreshImportButton();
 			});
 		}
@@ -287,6 +299,8 @@ export class ImportModal extends Modal {
 				await this.deps.dismissStore.undismiss(feedId, item.id);
 			} else {
 				await this.deps.dismissStore.dismiss(feedId, item.id);
+				// A dismissed item is no longer selectable; drop it from selection.
+				this.selectedIds.delete(item.id);
 			}
 			this.renderItems();
 		} catch (err) {
@@ -348,6 +362,12 @@ export class ImportModal extends Modal {
 			// Refresh the index and re-render so imported items lose their
 			// checkbox and gain the imported badge.
 			this.vaultIndex = buildFeedItemIndex(this.app, this.deps.feed.destinationFolder);
+			// Drop now-imported items from the selection so the count stays right.
+			for (const id of Array.from(this.selectedIds)) {
+				if (this.vaultIndex.has(id)) {
+					this.selectedIds.delete(id);
+				}
+			}
 			this.renderItems();
 			this.deps.onDone?.();
 		} catch (err) {
