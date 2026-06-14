@@ -32,4 +32,11 @@ Reports submitted through GitHub private vulnerability reporting are visible onl
 
 ## Security Considerations
 
-_Describe what the plugin does and does not do that's relevant to security: file reads, file writes, network access (none expected), external commands, etc._
+What RSS Importer does and does not do, relevant to security:
+
+- **Network access.** The plugin makes outbound HTTP requests through Obsidian's `requestUrl` API. It contacts only the feed hosts you configure, the redirect targets those hosts return, the `substack.com` public profile API (when you add a Substack handle), and the image or media URLs referenced by the items you import (when you enable downloads). It contacts no maintainer server and includes no analytics or telemetry.
+- **File reads.** It reads note frontmatter under your destination folder through Obsidian's metadata cache (for deduplication) and reads an existing note at a target path before overwriting it (collision check). It does not read other files in your vault.
+- **File writes.** It writes imported notes and, optionally, downloaded images into your vault using the Obsidian vault API (`vault.create`, `vault.process`, `vault.createBinary`). Overwrites use `vault.process` rather than `vault.modify`. It writes nothing outside your vault.
+- **No code execution.** The plugin runs no external commands, spawns no processes, and does not use `eval`. Remote HTML is converted to Markdown text; it is never executed. DOM is built with the Obsidian element API, never `innerHTML`.
+- **Desktop only.** The plugin is marked desktop-only.
+- **No credentials in this version.** Importing free and public feeds requires no login or token. (A later release adds optional Substack paid-post access using your own session cookie, stored in Obsidian's `SecretStorage` and sent only to your configured Substack hosts; this section will be expanded when that ships.)
