@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-06-14
+
+### Fixed
+- In the import window, dismissing or undismissing an item (and the refresh after an import) no longer clears the other items you had checked. Selection is preserved across re-renders.
+
+### Changed
+- The Markdown converter now strips Substack's email-truncation and "read in the app" notices, subscribe forms, CTA buttons, and related-post embeds, matched by Substack's structural component markers (never by body text). Images, captions, and article prose are kept. Author-written prose (including a hand-typed support paragraph) is left untouched.
+
 ## [0.1.1] - 2026-06-14
 
 ### Fixed
