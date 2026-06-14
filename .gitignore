@@ -47,3 +47,6 @@ GeminiReview.md
 
 # Internal documentation
 internal-docs/
+
+# Large raw feed captures (trimmed fixtures are committed; raws are local only)
+__tests__/fixtures/raw/
