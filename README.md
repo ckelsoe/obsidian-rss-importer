@@ -6,8 +6,8 @@ Import articles and podcasts from RSS, Atom, and Substack feeds into your vault 
 
 It is an importer, not a reader. It writes notes you own and then gets out of the way.
 
-> [!WARNING]
-> **Early development, use at your own risk.** RSS Importer is in active early development and is **not yet production-ready**. Features and note formats may still change, and bugs are possible. It writes (and, with the cleanup command, rewrites) notes in your vault, so **keep backups** and try it on a test vault first. Provided "as is", without warranty, under the MIT License. It is **not yet in the Obsidian Community Plugins store** — install via BRAT or manually (see below).
+> [!NOTE]
+> RSS Importer writes (and, with the cleanup command, rewrites) notes in your vault. As with any tool that creates files on your behalf, **keep backups** and try it on a test vault first. Provided "as is", without warranty, under the MIT License. It is **not yet in the Obsidian Community Plugins store** — install via BRAT or manually (see below).
 
 ## Requirements
 
@@ -19,8 +19,9 @@ It is an importer, not a reader. It writes notes you own and then gets out of th
 - **Multiple sources.** Add any RSS, Atom, or podcast feed. Substack publications are first-class: paste an `@handle`, a subdomain, a custom domain, or a post URL and the plugin resolves it to the right feed.
 - **One folder per feed, never re-imports.** Each feed imports into its own destination folder, and every note carries a stable identity in its frontmatter, so moving or renaming notes never causes duplicates on the next import. Reorganize into subfolders freely.
 - **Add-feed preview.** Paste a feed and resolve it to preview the publication title, host, recent item titles, and source type before you commit.
-- **Three-state import window.** Each item shows as imported, dismissed, or available, with checkboxes, live progress, and a result summary. Dismissing is reversible, and imported items update immediately.
-- **Archive backfill.** For Substack feeds, a "Load older" control pages back through the publication's archive, well beyond the recent RSS window, fetching older posts on demand.
+- **Three-state import window.** Each item shows as imported, dismissed, or available, with checkboxes, live progress, and a result summary. Dismissing is reversible, and imported items update immediately. A **Select all** toggle checks every available item at once, and counts show how many items are loaded and how many are selected.
+- **Archive backfill with endless scroll.** For Substack feeds, older posts load automatically as you scroll the import list, paging back through the publication's archive well beyond the recent RSS window and fetching bodies on demand. A "Load older" button is also there as a fallback and end-of-archive indicator.
+- **Re-detect source.** A custom-domain Substack is recognized as Substack on add. If one was added before that detection existed, a per-feed **Re-detect** button upgrades it in place so it gains archive backfill, without removing and re-adding the feed.
 - **Clean Markdown.** Article HTML is converted to tidy Markdown (headings, lists, tables, code blocks with language, captions, footnotes), with Substack subscribe/app/share widgets stripped.
 - **Per-feed cleanup rules.** Remove promotional clutter by link target (for example a "buy me a coffee" or subscribe block) or trim a trailing footer, applied on import and re-runnable over existing notes with the **Clean up imported notes** command. Matching is by link and structure, not wording, so rules keep working when the text changes.
 - **Images.** Link to the original image URLs, or download images into your vault.
@@ -31,7 +32,7 @@ It is an importer, not a reader. It writes notes you own and then gets out of th
 ## Usage
 
 1. Open **Settings → RSS Importer → Feeds → Add feed**. Paste a feed URL or Substack handle, click **Resolve** to preview, choose a destination folder, optionally add tags and cleanup rules, and save.
-2. Run the **Import from a feed** command (or the ribbon icon) to open the import window. Select items and import; for Substack, use **Load older** to reach archived posts. The summary reports what was created, skipped, or failed.
+2. Run the **Import from a feed** command (or the ribbon icon) to open the import window. Tick items (or use **Select all**) and import; for Substack, scroll the list to load older archived posts automatically. The summary reports what was created, skipped, or failed.
 3. Optionally run **Clean up imported notes** to re-apply a feed's cleanup rules to notes you already imported.
 
 ## Installation
