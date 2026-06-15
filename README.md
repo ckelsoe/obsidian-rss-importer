@@ -38,7 +38,7 @@ It is an importer, not a reader. It writes notes you own and then gets out of th
 
 > Not yet in the Obsidian Community Plugins store. For now, use BRAT or a manual install.
 
-### BRAT (recommended while in beta)
+### BRAT (recommended for now)
 
 BRAT installs and updates pre-release plugins straight from GitHub.
 

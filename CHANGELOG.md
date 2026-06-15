@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-06-15
+
+First stable release. The free and public-content importer is feature-complete: multi-source feeds (Substack and generic RSS/podcast), per-feed destination and dedup, the import window with dismiss, endless scroll, select-all and counts, HTML to Markdown conversion, image and media download, Substack archive backfill, and deterministic cleanup rules. Importing full bodies of paid Substack posts is planned for a later release.
+
 ### Added
 - Endless scroll in the import window: older Substack archive items now load automatically as you scroll toward the bottom of the list, instead of clicking "Load older" each time. The button stays as a fallback and as the "No older items" end-of-archive indicator. Generic RSS and podcast feeds still expose only their recent window, since they have no archive to page.
 - A "Select all" toggle above the item list that checks every available item currently loaded (skipping items already imported or dismissed), and flips to "Deselect all" once all are selected. With endless scroll, load more items and click again to extend the selection.
