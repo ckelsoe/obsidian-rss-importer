@@ -149,6 +149,26 @@
 /* Import modal: item list and rows.                                           */
 /* -------------------------------------------------------------------------- */
 
+.rss-importer-list-toolbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--size-4-2);
+	margin-bottom: var(--size-2-3);
+}
+
+.rss-importer-toolbar-right {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+}
+
+.rss-importer-load-count,
+.rss-importer-select-count {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
 .rss-importer-item-list {
 	display: flex;
 	flex-direction: column;
@@ -157,6 +177,14 @@
 	border: 1px solid var(--background-modifier-border);
 	border-radius: var(--radius-m);
 	margin-bottom: var(--size-4-3);
+}
+
+/* Endless-scroll sentinel: a zero-noise marker the observer watches at the
+   bottom of the list. It must occupy layout to be observable, so give it a
+   hairline height. */
+.rss-importer-scroll-sentinel {
+	flex: 0 0 auto;
+	height: 1px;
 }
 
 .rss-importer-list-message {

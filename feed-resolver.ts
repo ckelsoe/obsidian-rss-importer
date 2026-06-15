@@ -160,6 +160,45 @@ function bodyLooksLikeFeed(text: string): boolean {
 }
 
 /**
+ * True when a feed body is a Substack feed, identified by its
+ * `<generator>Substack</generator>` marker. This is the hard signal that lets a
+ * custom-domain Substack (one added by its domain rather than an `@handle`) be
+ * recognized as Substack and gain archive backfill, instead of falling back to
+ * generic and being stuck at the recent RSS window. The marker lives in the
+ * channel header that every Substack feed emits, so a substring test over the
+ * body is reliable; a generic site that merely links to Substack will not carry
+ * a `<generator>Substack` tag.
+ */
+function bodyIsSubstackFeed(text: string): boolean {
+	return /<generator>\s*substack/i.test(text);
+}
+
+/**
+ * Classifies an already-fetched feed response. A Substack body (generator
+ * marker) resolves as Substack with the feed normalized to `host/feed` (the
+ * path the Substack source and its archive API expect); anything else resolves
+ * as a generic feed at the URL the redirect chain landed on. Shared by the
+ * explicit-feed-URL and probe paths so both detect custom-domain Substacks.
+ */
+function classifyFeedResponse(finalUrl: URL, response: HttpResponse): ResolverResult {
+	const host = finalUrl.hostname.toLowerCase();
+	if (bodyIsSubstackFeed(response.text)) {
+		return {
+			sourceType: "substack",
+			canonicalHost: host,
+			feedUrl: `https://${host}/feed`,
+			handle: null,
+		};
+	}
+	return {
+		sourceType: "generic",
+		canonicalHost: host,
+		feedUrl: finalUrl.toString(),
+		handle: null,
+	};
+}
+
+/**
  * Extracts a bare Substack handle from an input, or null when the input does
  * not name one. Accepts `@handle`, `substack.com/@handle`, and
  * `https://substack.com/@handle` (with optional trailing path or slash).
@@ -246,12 +285,16 @@ export class FeedResolver {
 	 *  2. A URL whose host is `*.substack.com` -> Substack, feed at host/feed.
 	 *     A `/p/<slug>` post URL on a substack.com host falls in here; the same
 	 *     path on a custom domain does not (those are added via @handle).
-	 *  3. A URL whose path already names a feed (`/feed`, `/rss`, ...) -> generic.
-	 *  4. Any other URL -> probe `host/feed`; XML means generic.
+	 *  3. A URL whose path already names a feed (`/feed`, `/rss`, ...) -> fetch it
+	 *     and classify by body: Substack (generator marker) or generic.
+	 *  4. Any other URL -> probe `host/feed`; XML classifies the same way.
 	 *
 	 * In cases 2 to 4 the canonical host is derived by walking redirects from
 	 * the candidate feed URL, so a publication that moved hosts resolves to
-	 * where its feed actually lives.
+	 * where its feed actually lives. In cases 3 and 4 the fetched feed body is
+	 * inspected for the Substack generator marker, so a custom-domain Substack
+	 * added by its domain is recognized as Substack (and gains archive backfill)
+	 * rather than silently falling back to generic.
 	 */
 	async resolve(input: string): Promise<ResolverResult> {
 		const trimmed = input.trim();
@@ -282,7 +325,7 @@ export class FeedResolver {
 		}
 
 		if (hasFeedPathSuffix(url.pathname)) {
-			return this.resolveGenericFeedUrl(url.toString());
+			return this.resolveExplicitFeedUrl(url.toString());
 		}
 
 		return this.probeForFeed(url.hostname);
@@ -329,23 +372,21 @@ export class FeedResolver {
 	}
 
 	/**
-	 * Resolves a plain feed URL (one whose path already names a feed) as a
-	 * generic feed, walking redirects to find the canonical host.
+	 * Resolves a plain feed URL (one whose path already names a feed), walking
+	 * redirects to find the canonical host and inspecting the body so a
+	 * custom-domain Substack served at `/feed` is recognized as Substack rather
+	 * than generic.
 	 */
-	private async resolveGenericFeedUrl(feedUrl: string): Promise<ResolverResult> {
-		const finalUrl = await this.walkToCanonicalUrl(feedUrl);
-		return {
-			sourceType: "generic",
-			canonicalHost: finalUrl.hostname.toLowerCase(),
-			feedUrl: finalUrl.toString(),
-			handle: null,
-		};
+	private async resolveExplicitFeedUrl(feedUrl: string): Promise<ResolverResult> {
+		const { finalUrl, response } = await this.walkRedirects(feedUrl);
+		return classifyFeedResponse(finalUrl, response);
 	}
 
 	/**
 	 * Probes `host/feed` for a feed when the input gave no feed path. A response
-	 * that reads as XML resolves as a generic feed at the (post-redirect)
-	 * canonical host. Anything else is not a feed we can use.
+	 * that reads as XML resolves at the (post-redirect) canonical host, as
+	 * Substack when the body carries the Substack generator marker and generic
+	 * otherwise. Anything that does not read as a feed is not one we can use.
 	 */
 	private async probeForFeed(host: string): Promise<ResolverResult> {
 		const candidate = `https://${host.toLowerCase()}/feed`;
@@ -353,12 +394,7 @@ export class FeedResolver {
 		const contentType = getHeader(response.headers, "Content-Type");
 		const isXml = looksLikeXmlContentType(contentType) || bodyLooksLikeFeed(response.text);
 		if (response.status >= 200 && response.status < 300 && isXml) {
-			return {
-				sourceType: "generic",
-				canonicalHost: finalUrl.hostname.toLowerCase(),
-				feedUrl: finalUrl.toString(),
-				handle: null,
-			};
+			return classifyFeedResponse(finalUrl, response);
 		}
 		throw new ResolveError(`No feed found at ${candidate}`);
 	}
@@ -367,12 +403,6 @@ export class FeedResolver {
 	private async walkToCanonicalHost(startUrl: string): Promise<string> {
 		const { finalUrl } = await this.walkRedirects(startUrl);
 		return finalUrl.hostname.toLowerCase();
-	}
-
-	/** Walks redirects from a URL and returns just the final resolved URL. */
-	private async walkToCanonicalUrl(startUrl: string): Promise<URL> {
-		const { finalUrl } = await this.walkRedirects(startUrl);
-		return finalUrl;
 	}
 
 	/**

@@ -9,6 +9,7 @@
 
 import {
 	App,
+	type ButtonComponent,
 	Notice,
 	PluginSettingTab,
 	Setting,
@@ -16,7 +17,7 @@ import {
 	type Plugin,
 	type SettingDefinitionItem,
 } from "obsidian";
-import type { FeedSource } from "./feed-source";
+import type { FeedSource, SourceType } from "./feed-source";
 import type { FeedConfig, RssImporterSettings } from "./settings";
 import {
 	REQUEST_DELAY_MIN,
@@ -317,6 +318,17 @@ class FeedEditorPage extends SettingPage {
 				}),
 			);
 
+		new Setting(editor)
+			.setName("Source type")
+			.setDesc(
+				`Currently ${sourceTypeLabel(feed.sourceType)}. Re-detect if a custom-domain Substack was added before detection improved and is stuck at its recent window with no archive backfill.`,
+			)
+			.addButton((btn) =>
+				btn.setButtonText("Re-detect").onClick(async () => {
+					await this.redetectSource(btn);
+				}),
+			);
+
 		const settings = this.plugin.settings;
 
 		new Setting(editor)
@@ -410,4 +422,44 @@ class FeedEditorPage extends SettingPage {
 					}),
 			);
 	}
+
+	// Re-resolve the stored feed URL and update its source type in place. This is
+	// the user-facing path for a custom-domain Substack that was saved as generic
+	// before the resolver learned to detect it: re-detecting upgrades it to
+	// Substack (gaining archive backfill) without removing and re-adding the feed,
+	// so its folder, tags, and dismissals are preserved. feedId is left untouched
+	// so item dedup and dismissals keyed off it stay valid even if the canonical
+	// host moved. Failures surface a Notice plus the original error in the console.
+	private async redetectSource(btn: ButtonComponent): Promise<void> {
+		const feed = this.feed;
+		btn.setDisabled(true);
+		btn.setButtonText("Checking…");
+		try {
+			const { source } = this.plugin.makeSource(feed.feedUrl);
+			const resolved = await source.resolve(feed.feedUrl);
+			const changed = resolved.sourceType !== feed.sourceType;
+			feed.sourceType = resolved.sourceType;
+			feed.canonicalHost = resolved.canonicalHost;
+			feed.feedUrl = resolved.feedUrl;
+			await this.plugin.saveSettings();
+			new Notice(
+				changed
+					? `Source type updated to ${sourceTypeLabel(resolved.sourceType)}.`
+					: `No change. Still ${sourceTypeLabel(resolved.sourceType)}.`,
+			);
+			// Rebuild the page so the "Source type" description reflects the result;
+			// this also resets the button, so no manual re-enable is needed here.
+			this.display();
+		} catch (err) {
+			new Notice("Could not re-detect the source. See the console for details.");
+			console.error(err);
+			btn.setDisabled(false);
+			btn.setButtonText("Re-detect");
+		}
+	}
+}
+
+/** Human-readable label for a feed's source type, for UI copy. */
+function sourceTypeLabel(type: SourceType): string {
+	return type === "substack" ? "Substack" : "generic RSS";
 }

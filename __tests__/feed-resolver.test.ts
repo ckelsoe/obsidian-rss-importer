@@ -173,10 +173,10 @@ describe("FeedResolver: Substack subdomain and post URLs", () => {
 		expect(result.feedUrl).toBe("https://kevin.substack.com/feed");
 	});
 
-	it("classifies a custom-domain post URL (/p/<slug>) as generic, not substack", async () => {
-		// A /p/<slug> path on a non-substack.com host is NOT claimed as Substack:
-		// custom-domain Substacks are added via @handle. Here the host's /feed
-		// probe returns XML, so it resolves as a generic feed.
+	it("classifies a custom-domain post URL (/p/<slug>) as generic when the feed has no Substack marker", async () => {
+		// A /p/<slug> path on a non-substack.com host is NOT claimed as Substack
+		// from the path alone. The host's /feed probe returns plain XML with no
+		// Substack generator marker, so it resolves as a generic feed.
 		const { fetcher } = makeFetcher({
 			"https://the.lxxscrolls.com/feed": {
 				status: 200,
@@ -189,6 +189,49 @@ describe("FeedResolver: Substack subdomain and post URLs", () => {
 		const result = await resolver.resolve("https://the.lxxscrolls.com/p/daniel-6");
 
 		expect(result.sourceType).toBe("generic");
+		expect(result.canonicalHost).toBe("the.lxxscrolls.com");
+		expect(result.feedUrl).toBe("https://the.lxxscrolls.com/feed");
+	});
+});
+
+describe("FeedResolver: custom-domain Substack detection", () => {
+	// A Substack feed declares <generator>Substack</generator> in its channel
+	// header. That marker is the hard signal that upgrades a custom-domain feed
+	// from generic to substack, so it gains archive backfill.
+	const SUBSTACK_FEED_BODY =
+		"<?xml version=\"1.0\"?><rss><channel><title>The LXX Scrolls</title>" +
+		"<generator>Substack</generator></channel></rss>";
+
+	it("upgrades a probed bare host to substack when the feed carries the generator marker", async () => {
+		const { fetcher } = makeFetcher({
+			"https://the.lxxscrolls.com/feed": {
+				status: 200,
+				headers: { "Content-Type": "application/rss+xml" },
+				text: SUBSTACK_FEED_BODY,
+			},
+		});
+		const resolver = new FeedResolver(fetcher);
+
+		const result = await resolver.resolve("the.lxxscrolls.com");
+
+		expect(result.sourceType).toBe("substack");
+		expect(result.canonicalHost).toBe("the.lxxscrolls.com");
+		expect(result.feedUrl).toBe("https://the.lxxscrolls.com/feed");
+	});
+
+	it("upgrades an explicit custom-domain /feed URL to substack via the generator marker", async () => {
+		const { fetcher } = makeFetcher({
+			"https://the.lxxscrolls.com/feed": {
+				status: 200,
+				headers: { "Content-Type": "application/rss+xml" },
+				text: SUBSTACK_FEED_BODY,
+			},
+		});
+		const resolver = new FeedResolver(fetcher);
+
+		const result = await resolver.resolve("https://the.lxxscrolls.com/feed");
+
+		expect(result.sourceType).toBe("substack");
 		expect(result.canonicalHost).toBe("the.lxxscrolls.com");
 		expect(result.feedUrl).toBe("https://the.lxxscrolls.com/feed");
 	});

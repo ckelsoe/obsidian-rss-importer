@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Endless scroll in the import window: older Substack archive items now load automatically as you scroll toward the bottom of the list, instead of clicking "Load older" each time. The button stays as a fallback and as the "No older items" end-of-archive indicator. Generic RSS and podcast feeds still expose only their recent window, since they have no archive to page.
+- A "Select all" toggle above the item list that checks every available item currently loaded (skipping items already imported or dismissed), and flips to "Deselect all" once all are selected. With endless scroll, load more items and click again to extend the selection.
+- Item counts in the import window toolbar: a running loaded count on the left that grows as older items page in and reads "All N items" once the archive is exhausted, and an "x of y selected" count on the right showing how many of the available items are selected.
+- A "Re-detect" button on each feed's editor page that re-resolves the feed and updates its source type in place, so a custom-domain Substack saved as a generic feed can be upgraded to gain archive backfill without removing and re-adding it (folder, tags, and dismissals are kept).
+
+### Fixed
+- Custom-domain Substack publications (for example a Substack served from its own domain) added by their domain are now detected as Substack via the feed's generator marker, so they get archive backfill and endless scroll instead of being limited to the recent window. Previously only Substacks added by `@handle` or a `*.substack.com` address got archive access.
+
 ## [0.4.0] - 2026-06-14
 
 ### Added

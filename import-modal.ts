@@ -77,6 +77,56 @@ export function badgeStateForItem(
 	return "available";
 }
 
+/**
+ * The ids of items that are still selectable (badge state "available"): not yet
+ * imported and not dismissed. "Select all" operates on exactly this set, so an
+ * already-imported item is never re-selected. Pure and exported for testing.
+ */
+export function selectableItemIds(
+	items: readonly FeedItem[],
+	feedId: string,
+	vaultIndex: ReadonlyMap<string, ImportedRecord>,
+	dismissStore: Pick<DismissStore, "isDismissed">,
+): string[] {
+	const ids: string[] = [];
+	for (const item of items) {
+		if (badgeStateForItem(item, feedId, vaultIndex, dismissStore) === "available") {
+			ids.push(item.id);
+		}
+	}
+	return ids;
+}
+
+export interface SelectAllControlState {
+	/** Button label reflecting whether the next click selects or clears. */
+	label: string;
+	/** True when nothing is selectable, so the control is inert. */
+	disabled: boolean;
+	/** What a click should do given the current selection. */
+	action: "select" | "clear";
+}
+
+/**
+ * Decide what the "Select all" control should show and do, given how many of the
+ * loaded items are selectable (available) and how many of those are already
+ * selected. The control is a toggle: once every selectable item is checked, the
+ * same button clears them again. "Select all" only ever covers the items that
+ * are currently loaded into the list, so with endless scroll the user can load
+ * more and click again to extend the selection. Pure and exported for testing.
+ */
+export function selectAllControlState(
+	selectableCount: number,
+	selectedSelectableCount: number,
+): SelectAllControlState {
+	if (selectableCount === 0) {
+		return { label: "Select all", disabled: true, action: "select" };
+	}
+	const allSelected = selectedSelectableCount >= selectableCount;
+	return allSelected
+		? { label: "Deselect all", disabled: false, action: "clear" }
+		: { label: "Select all", disabled: false, action: "select" };
+}
+
 interface ItemRow {
 	item: FeedItem;
 	rowEl: HTMLDivElement;
@@ -105,12 +155,21 @@ export class ImportModal extends Modal {
 	private readonly selectedIds = new Set<string>();
 
 	private listEl: HTMLDivElement | null = null;
+	private loadCountEl: HTMLSpanElement | null = null;
+	private selectCountEl: HTMLSpanElement | null = null;
+	private selectAllButtonEl: HTMLButtonElement | null = null;
 	private loadOlderEl: HTMLDivElement | null = null;
 	private loadOlderButtonEl: HTMLButtonElement | null = null;
 	private progressEl: HTMLDivElement | null = null;
 	private summaryEl: HTMLDivElement | null = null;
 	private importButtonEl: HTMLButtonElement | null = null;
 	private focusTimer: number | null = null;
+	// Endless scroll: an observer watches a sentinel at the bottom of the list and
+	// auto-triggers the same archive backfill the "Load older" button does. Only
+	// armed for sources with an archive (Substack); null otherwise or when the
+	// runtime lacks IntersectionObserver, in which case the button is the fallback.
+	private olderObserver: IntersectionObserver | null = null;
+	private sentinelEl: HTMLDivElement | null = null;
 
 	constructor(app: App, deps: ImportModalDeps) {
 		super(app);
@@ -127,8 +186,48 @@ export class ImportModal extends Modal {
 		contentEl.addClass("rss-importer-import-modal");
 		this.setTitle(`Import from ${this.deps.feed.publicationTitle}`);
 
+		// Toolbar above the list. Left: a running count of loaded items that grows
+		// as endless scroll pages the archive, then reads "All N" once exhausted.
+		// Right: how many of the loaded items are selected, plus a toggle that
+		// selects every available (not-yet-imported) item or clears them all.
+		const toolbar = contentEl.createDiv({ cls: "rss-importer-list-toolbar" });
+		this.loadCountEl = toolbar.createSpan({ cls: "rss-importer-load-count" });
+
+		const toolbarRight = toolbar.createDiv({ cls: "rss-importer-toolbar-right" });
+		this.selectCountEl = toolbarRight.createSpan({ cls: "rss-importer-select-count" });
+		const selectAllBtn = toolbarRight.createEl("button", {
+			cls: "rss-importer-select-all-button",
+			text: "Select all",
+			attr: { type: "button" },
+		});
+		selectAllBtn.toggleAttribute("disabled", true);
+		selectAllBtn.addEventListener("click", () => {
+			this.toggleSelectAll();
+		});
+		this.selectAllButtonEl = selectAllBtn;
+
 		this.listEl = contentEl.createDiv({ cls: "rss-importer-item-list" });
 		this.renderListMessage("Loading items…");
+
+		// Endless scroll: when the source has an archive, watch a bottom sentinel
+		// inside the scrollable list and auto-load older items as it comes into
+		// view. The "Load older" button below stays as a fallback and as the
+		// terminal "No older items" indicator.
+		if (this.deps.feed.sourceType === "substack" && typeof IntersectionObserver !== "undefined") {
+			this.olderObserver = new IntersectionObserver(
+				(entries) => {
+					for (const entry of entries) {
+						if (entry.isIntersecting) {
+							void this.loadOlder();
+							break;
+						}
+					}
+				},
+				// A margin so the next page starts loading just before the user
+				// hits the very bottom, keeping the scroll feeling continuous.
+				{ root: this.listEl, rootMargin: "200px" },
+			);
+		}
 
 		// Archive backfill is Substack-only: generic feeds expose no older items
 		// beyond the recent window, so the control is created only for Substack.
@@ -180,6 +279,14 @@ export class ImportModal extends Modal {
 			window.clearTimeout(this.focusTimer);
 			this.focusTimer = null;
 		}
+		if (this.olderObserver !== null) {
+			this.olderObserver.disconnect();
+			this.olderObserver = null;
+		}
+		this.sentinelEl = null;
+		this.loadCountEl = null;
+		this.selectCountEl = null;
+		this.selectAllButtonEl = null;
 		this.loadOlderEl = null;
 		this.loadOlderButtonEl = null;
 		this.contentEl.empty();
@@ -248,6 +355,11 @@ export class ImportModal extends Modal {
 		} finally {
 			this.loadingOlder = false;
 			this.refreshLoadOlder();
+			// Re-arm against a fresh sentinel now that loading has cleared. The
+			// render that ran mid-load could not re-trigger (the loading guard
+			// swallowed it); observing a new element fires an initial callback, so
+			// a short page that left the sentinel visible loads the next page too.
+			this.observeSentinel();
 		}
 	}
 
@@ -291,6 +403,8 @@ export class ImportModal extends Modal {
 		if (this.items.length === 0) {
 			this.renderListMessage("This feed has no items right now.");
 			this.refreshImportButton();
+			this.refreshSelectAll();
+			this.refreshLoadCount();
 			return;
 		}
 
@@ -298,6 +412,9 @@ export class ImportModal extends Modal {
 			this.renderItemRow(el, item);
 		}
 		this.refreshImportButton();
+		this.refreshSelectAll();
+		this.refreshLoadCount();
+		this.observeSentinel();
 
 		this.focusTimer = window.setTimeout(() => {
 			this.focusTimer = null;
@@ -334,6 +451,7 @@ export class ImportModal extends Modal {
 					this.selectedIds.delete(item.id);
 				}
 				this.refreshImportButton();
+				this.refreshSelectAll();
 			});
 		}
 
@@ -415,6 +533,102 @@ export class ImportModal extends Modal {
 			}
 		}
 		return selected;
+	}
+
+	// (Re)create the bottom sentinel and observe it. Called after every render and
+	// after each archive page so a fresh element generates an initial intersection
+	// callback. No-op without an observer (non-Substack, or no IntersectionObserver)
+	// or when the archive is exhausted, so the sentinel disappears at the end.
+	private observeSentinel(): void {
+		const observer = this.olderObserver;
+		const el = this.listEl;
+		if (observer === null || el === null) {
+			return;
+		}
+		if (this.sentinelEl !== null) {
+			observer.unobserve(this.sentinelEl);
+			this.sentinelEl = null;
+		}
+		if (!this.hasMoreOlder) {
+			return;
+		}
+		this.sentinelEl = el.createDiv({ cls: "rss-importer-scroll-sentinel" });
+		observer.observe(this.sentinelEl);
+	}
+
+	// Select every available loaded item, or clear them once all are selected.
+	// Operates on the selection set (not the DOM) and then reflects the result
+	// onto the rendered checkboxes, matching how dismiss/re-render treat selection.
+	private toggleSelectAll(): void {
+		const ids = selectableItemIds(
+			this.items,
+			this.deps.feed.feedId,
+			this.vaultIndex,
+			this.deps.dismissStore,
+		);
+		const selectedSelectable = ids.filter((id) => this.selectedIds.has(id)).length;
+		const state = selectAllControlState(ids.length, selectedSelectable);
+		if (state.disabled) {
+			return;
+		}
+		for (const id of ids) {
+			if (state.action === "select") {
+				this.selectedIds.add(id);
+			} else {
+				this.selectedIds.delete(id);
+			}
+		}
+		for (const row of this.rows) {
+			if (row.checkbox !== null) {
+				row.checkbox.checked = this.selectedIds.has(row.item.id);
+			}
+		}
+		this.refreshImportButton();
+		this.refreshSelectAll();
+	}
+
+	// Reflect the current selectable/selected counts onto the select-all toggle
+	// and the "x of y selected" count beside it. The count is over selectable
+	// (available) items only, so already-imported rows never inflate the total.
+	private refreshSelectAll(): void {
+		const btn = this.selectAllButtonEl;
+		if (btn === null) {
+			return;
+		}
+		const ids = selectableItemIds(
+			this.items,
+			this.deps.feed.feedId,
+			this.vaultIndex,
+			this.deps.dismissStore,
+		);
+		const selectedSelectable = ids.filter((id) => this.selectedIds.has(id)).length;
+		const state = selectAllControlState(ids.length, selectedSelectable);
+		btn.setText(state.label);
+		btn.toggleAttribute("disabled", state.disabled);
+
+		const countEl = this.selectCountEl;
+		if (countEl !== null) {
+			countEl.setText(ids.length === 0 ? "" : `${selectedSelectable} of ${ids.length} selected`);
+		}
+	}
+
+	// Reflect the loaded-item count onto the left of the toolbar. While the
+	// source still has older items to page (Substack archive not yet exhausted),
+	// it reads "N items loaded"; otherwise the loaded set is everything available,
+	// so it reads "All N items". Generic feeds have no archive, so they reach the
+	// "All" wording as soon as their recent window loads.
+	private refreshLoadCount(): void {
+		const el = this.loadCountEl;
+		if (el === null) {
+			return;
+		}
+		const n = this.items.length;
+		if (n === 0) {
+			el.setText("");
+			return;
+		}
+		const moreToLoad = this.deps.feed.sourceType === "substack" && this.hasMoreOlder;
+		el.setText(moreToLoad ? `${n} items loaded` : `All ${n} items`);
 	}
 
 	private refreshImportButton(): void {

@@ -8,6 +8,8 @@ import { defaultDestinationFolder, parseTagsInput, AddFeedModal } from "../add-f
 import {
 	buildResolvedFeedFromConfig,
 	badgeStateForItem,
+	selectableItemIds,
+	selectAllControlState,
 	ImportModal,
 } from "../import-modal";
 import { RssImporterSettingTab } from "../settings-tab";
@@ -143,6 +145,58 @@ describe("badgeStateForItem", () => {
 		const item = makeItem({ id: "fresh" });
 		const index = new Map<string, ImportedRecord>();
 		expect(badgeStateForItem(item, "example.com", index, dismissStore)).toBe("available");
+	});
+});
+
+describe("selectableItemIds", () => {
+	const dismissStore = {
+		isDismissed: (_feedId: string, itemId: string): boolean => itemId === "dismissed",
+	};
+
+	test("returns only available items, skipping imported and dismissed", () => {
+		const items = [
+			makeItem({ id: "available-1" }),
+			makeItem({ id: "imported" }),
+			makeItem({ id: "dismissed" }),
+			makeItem({ id: "available-2" }),
+		];
+		const index = new Map<string, ImportedRecord>([["imported", { path: "Feeds/Example/x.md" }]]);
+		expect(selectableItemIds(items, "example.com", index, dismissStore)).toEqual([
+			"available-1",
+			"available-2",
+		]);
+	});
+
+	test("returns an empty list when nothing is available", () => {
+		const items = [makeItem({ id: "imported" }), makeItem({ id: "dismissed" })];
+		const index = new Map<string, ImportedRecord>([["imported", { path: "x.md" }]]);
+		expect(selectableItemIds(items, "example.com", index, dismissStore)).toEqual([]);
+	});
+});
+
+describe("selectAllControlState", () => {
+	test("disabled with the select label when nothing is selectable", () => {
+		expect(selectAllControlState(0, 0)).toEqual({
+			label: "Select all",
+			disabled: true,
+			action: "select",
+		});
+	});
+
+	test("offers select when some selectable items are unselected", () => {
+		expect(selectAllControlState(5, 2)).toEqual({
+			label: "Select all",
+			disabled: false,
+			action: "select",
+		});
+	});
+
+	test("flips to clear once every selectable item is selected", () => {
+		expect(selectAllControlState(5, 5)).toEqual({
+			label: "Deselect all",
+			disabled: false,
+			action: "clear",
+		});
 	});
 });
 
