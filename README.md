@@ -7,7 +7,7 @@ Import articles and podcasts from RSS, Atom, and Substack feeds into your vault 
 It is an importer, not a reader. It writes notes you own and then gets out of the way.
 
 > [!NOTE]
-> RSS Importer writes (and, with the cleanup command, rewrites) notes in your vault. As with any tool that creates files on your behalf, **keep backups** and try it on a test vault first. Provided "as is", without warranty, under the MIT License. It is **not yet in the Obsidian Community Plugins store** — install via BRAT or manually (see below).
+> RSS Importer writes (and, with the cleanup command, rewrites) notes in your vault. As with any tool that creates files on your behalf, **keep backups** and try it on a test vault first. Provided "as is", without warranty, under the MIT License.
 
 ## Requirements
 
@@ -37,27 +37,16 @@ It is an importer, not a reader. It writes notes you own and then gets out of th
 
 ## Installation
 
-> Not yet in the Obsidian Community Plugins store. For now, use BRAT or a manual install.
+### Obsidian Community plugins (recommended)
 
-### BRAT (recommended for now)
-
-BRAT installs and updates pre-release plugins straight from GitHub.
-
-1. Install the **BRAT** plugin from Community Plugins.
-2. Open BRAT settings and click **Add Beta Plugin**.
-3. Enter: `https://github.com/ckelsoe/obsidian-rss-importer`
-4. Enable **RSS Importer** in Settings → Community plugins.
+In Obsidian, go to **Settings → Community plugins → Browse**, search for **RSS Importer**, then install and enable it. This is the recommended way to install and to receive updates.
 
 ### Manual installation
 
 1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/ckelsoe/obsidian-rss-importer/releases/latest).
 2. Create a folder named `rss-importer` in your vault's `.obsidian/plugins/` directory.
 3. Copy the downloaded files into this folder.
-4. Reload Obsidian, then enable **RSS Importer** in Settings → Community plugins.
-
-### From Obsidian Community Plugins
-
-Once the plugin is accepted into the store, you will be able to find it under **Settings → Community plugins → Browse** by searching for **RSS Importer**.
+4. Reload Obsidian, then enable **RSS Importer** in **Settings → Community plugins**.
 
 ## Changelog
 
