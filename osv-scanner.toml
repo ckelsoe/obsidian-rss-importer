@@ -1,0 +1,7 @@
+# OSV-Scanner suppressions. Every entry must document why the advisory is
+# accepted and what would let us drop it. Revisit whenever the dependency tree
+# changes (a new lockfile may remove the transitive path entirely).
+
+[[IgnoredVulns]]
+id = "GHSA-h67p-54hq-rp68"
+reason = "js-yaml quadratic-complexity DoS in merge-key parsing (vulnerable <= 4.1.1, patched in 4.2.0). Reaches this repo only as js-yaml@3.14.2, a deep transitive DEV dependency: ts-jest -> @jest/transform -> babel-plugin-istanbul -> @istanbuljs/load-nyc-config -> js-yaml. It is never in the shipped main.js (esbuild bundles runtime deps only) and parses only our own trusted coverage config, not attacker-controlled input. No non-breaking fix exists: the patch is js-yaml 4.2.0, but load-nyc-config uses the 3.x safeLoad API removed in 4.x, so forcing an override would break the coverage loader. Drop this entry once load-nyc-config moves off js-yaml 3.x or the path leaves the tree."
