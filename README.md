@@ -1,6 +1,6 @@
 # RSS Importer
 
-[![Obsidian](https://img.shields.io/badge/Obsidian-v1.13.0%2B-7C3AED?logo=obsidian&logoColor=white)](https://obsidian.md) [![License: MIT](https://img.shields.io/badge/License-MIT-blue)](https://github.com/ckelsoe/obsidian-rss-importer/blob/main/LICENSE)
+[![CI](https://github.com/ckelsoe/obsidian-rss-importer/actions/workflows/ci.yml/badge.svg)](https://github.com/ckelsoe/obsidian-rss-importer/actions/workflows/ci.yml) [![Release](https://github.com/ckelsoe/obsidian-rss-importer/actions/workflows/release.yml/badge.svg)](https://github.com/ckelsoe/obsidian-rss-importer/actions/workflows/release.yml) [![Downloads](https://badgen.net/github/assets-dl/ckelsoe/obsidian-rss-importer?label=downloads)](https://github.com/ckelsoe/obsidian-rss-importer/releases) [![Stars](https://badgen.net/github/stars/ckelsoe/obsidian-rss-importer)](https://github.com/ckelsoe/obsidian-rss-importer) [![Obsidian](https://img.shields.io/badge/Obsidian-v1.13.0%2B-7C3AED?logo=obsidian&logoColor=white)](https://obsidian.md) [![License: MIT](https://img.shields.io/badge/License-MIT-blue)](https://github.com/ckelsoe/obsidian-rss-importer/blob/main/LICENSE) [![Latest](https://badgen.net/github/release/ckelsoe/obsidian-rss-importer?label=latest)](https://github.com/ckelsoe/obsidian-rss-importer/releases/latest)
 
 Import articles and podcasts from RSS, Atom, and Substack feeds into your vault as Markdown notes, organized by source feed and deduplicated by note identity.
 
