@@ -1,8 +1,8 @@
 # Privacy Policy
 
-_Last updated: 2026-06-14_
+_Last updated: 2026-06-15_
 
-This policy explains what the **RSS Importer** Obsidian plugin ("the plugin") does and does not do with your data. It applies to the plugin as distributed through the Obsidian Community Plugins marketplace, GitHub releases, and BRAT.
+This policy explains what the **RSS Importer** Obsidian plugin ("the plugin") does and does not do with your data. It applies to the plugin as distributed through the Obsidian Community Plugins marketplace and GitHub releases.
 
 ## Summary
 
@@ -14,9 +14,16 @@ RSS Importer reads feeds you add and writes their items into your vault as Markd
 
 - When you add a feed, the plugin fetches the URL you entered (and, for a Substack handle, the public Substack profile API) to resolve and preview the feed.
 - When you import, the plugin fetches the feed and the selected items, converts each to Markdown, and writes a note into the destination folder you chose. If you turn on image download, it also fetches the images referenced by those items and saves them into your vault.
-- To avoid re-importing, the plugin scans the frontmatter of notes under your destination folder (through Obsidian's metadata cache) and reads an existing note at a target path before overwriting it. It does not read other files in your vault.
+- To avoid re-importing, the plugin lists note paths in your vault and reads the frontmatter of notes under your destination folder (through Obsidian's metadata cache), and reads an existing note at a target path before overwriting it. It enumerates paths to find its own notes and to offer folder auto-complete in settings; it does not read the contents of unrelated files.
 
 Every fetch is triggered by an explicit action of yours (adding a feed, or running an import). The plugin does no background polling.
+
+## Device access
+
+Beyond network requests, the plugin uses a small set of device capabilities, all local and all disclosed by Obsidian's plugin scan:
+
+- **Filesystem outside the vault.** Only the optional "save media outside the vault" setting uses Node's `fs` module, and only to write downloaded media into the folder you configure (Obsidian's vault API cannot write outside the vault). It is desktop-only and reads nothing. With the setting off, the default, the plugin does not access the filesystem outside your vault.
+- **Clipboard, write only.** The "copy debug log" action writes the plugin's own diagnostic log to your clipboard so you can paste it into a bug report. The plugin never reads the clipboard.
 
 ## Network use
 

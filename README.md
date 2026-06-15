@@ -35,6 +35,16 @@ It is an importer, not a reader. It writes notes you own and then gets out of th
 2. Run the **Import from a feed** command (or the ribbon icon) to open the import window. Tick items (or use **Select all**) and import; for Substack, scroll the list to load older archived posts automatically. The summary reports what was created, skipped, or failed.
 3. Optionally run **Clean up imported notes** to re-apply a feed's cleanup rules to notes you already imported.
 
+## Permissions and access
+
+RSS Importer is desktop-only, runs entirely on your device, and has no telemetry or maintainer server. Obsidian's plugin scan discloses three capabilities. Here is exactly what each is and why it exists:
+
+- **Filesystem access outside the vault.** Used only by the optional **save media outside the vault** setting. When you turn it on and choose a folder, the plugin writes downloaded podcast, audio, or video files to that folder with Node's `fs` module, because Obsidian's vault API cannot write outside the vault. It is guarded to desktop only, writes only to the folder you configure, and reads nothing. With the setting off (the default), the plugin never touches the filesystem outside your vault.
+- **Vault file enumeration.** The plugin lists note paths for two reasons: to find the notes it already imported so it never creates duplicates, and to offer folder auto-complete in settings. It reads the frontmatter of notes in your destination folders to match them, and does not read the contents of unrelated files.
+- **Clipboard, write only.** The only clipboard use is the **copy debug log** action, which writes the plugin's own diagnostic log to your clipboard so you can paste it into a bug report. It never reads the clipboard, so it cannot see anything you copied elsewhere.
+
+None of these send data anywhere. Full network and data behavior is in [PRIVACY.md](./PRIVACY.md).
+
 ## Installation
 
 ### Obsidian Community plugins (recommended)
