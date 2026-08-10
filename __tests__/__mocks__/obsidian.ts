@@ -35,16 +35,24 @@ export class ChainableStub {
 	getAttribute(_name: string): string | null {
 		return null;
 	}
-	createEl(_tag: string, _opts?: unknown): ChainableStub {
+	// All three creators share one child factory rather than delegating to
+	// createEl. This stub *implements* the Obsidian DOM helpers, so routing
+	// createDiv through createEl("div") reads to obsidianmd/prefer-create-el as
+	// a call site that should use createDiv, and taking its advice here would
+	// make the method call itself.
+	private makeChild(): ChainableStub {
 		const el = new ChainableStub();
 		this.children.push(el);
 		return el;
 	}
+	createEl(_tag: string, _opts?: unknown): ChainableStub {
+		return this.makeChild();
+	}
 	createDiv(_opts?: unknown): ChainableStub {
-		return this.createEl("div");
+		return this.makeChild();
 	}
 	createSpan(_opts?: unknown): ChainableStub {
-		return this.createEl("span");
+		return this.makeChild();
 	}
 	appendChild(child: ChainableStub): ChainableStub {
 		this.children.push(child);
