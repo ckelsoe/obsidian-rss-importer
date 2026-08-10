@@ -1,12 +1,12 @@
 /** @jest-environment jsdom */
 
-import { readFileSync } from "fs";
-import { join } from "path";
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
-import type { HttpFetcher, HttpRequest, HttpResponse } from "../feed-source";
-import { parseFeed } from "../feed-xml";
-import type { RawFeedItem } from "../feed-xml";
-import type { ResolverResult } from "../feed-resolver";
+import type { HttpFetcher, HttpRequest, HttpResponse } from '../feed-source';
+import { parseFeed } from '../feed-xml';
+import type { RawFeedItem } from '../feed-xml';
+import type { ResolverResult } from '../feed-resolver';
 import {
 	applyLimit,
 	buildResolvedFeed,
@@ -17,12 +17,12 @@ import {
 	mapArchivePostToFeedItem,
 	mapRawItemToFeedItem,
 	readPostBodyHtml,
-} from "../source-common";
+} from '../source-common';
 
-const FIXTURES = join(__dirname, "fixtures");
+const FIXTURES = join(__dirname, 'fixtures');
 
 function fixture(name: string): string {
-	return readFileSync(join(FIXTURES, name), "utf8");
+	return readFileSync(join(FIXTURES, name), 'utf8');
 }
 
 /**
@@ -58,23 +58,28 @@ function firstRawItem(name: string): RawFeedItem {
 	return item;
 }
 
-describe("fetchAndParseFeed", () => {
-	it("GETs the feed URL and parses the body", async () => {
-		const { fetcher, calls } = scriptedFetcher(fixture("substack-item.xml"));
-		const parsed = await fetchAndParseFeed(fetcher, "https://host.example/feed");
+describe('fetchAndParseFeed', () => {
+	it('GETs the feed URL and parses the body', async () => {
+		const { fetcher, calls } = scriptedFetcher(
+			fixture('substack-item.xml'),
+		);
+		const parsed = await fetchAndParseFeed(
+			fetcher,
+			'https://host.example/feed',
+		);
 
 		expect(calls).toHaveLength(1);
-		expect(calls[0]?.url).toBe("https://host.example/feed");
-		expect(calls[0]?.method).toBe("GET");
-		expect(parsed.feedTitle).toBe("Coach Jon McLernon");
+		expect(calls[0]?.url).toBe('https://host.example/feed');
+		expect(calls[0]?.method).toBe('GET');
+		expect(parsed.feedTitle).toBe('Coach Jon McLernon');
 		expect(parsed.items).toHaveLength(1);
 	});
 
-	it("throws FeedFetchError surfacing the status on a non-2xx response", async () => {
-		const { fetcher } = scriptedFetcher("nope", 503);
+	it('throws FeedFetchError surfacing the status on a non-2xx response', async () => {
+		const { fetcher } = scriptedFetcher('nope', 503);
 		let caught: unknown;
 		try {
-			await fetchAndParseFeed(fetcher, "https://host.example/feed");
+			await fetchAndParseFeed(fetcher, 'https://host.example/feed');
 		} catch (err: unknown) {
 			caught = err;
 		}
@@ -82,15 +87,15 @@ describe("fetchAndParseFeed", () => {
 		expect(caught).toBeInstanceOf(Error);
 		const fetchErr = caught as FeedFetchError;
 		expect(fetchErr.status).toBe(503);
-		expect(fetchErr.message).toContain("503");
+		expect(fetchErr.message).toContain('503');
 	});
 
-	it("wraps a transport failure and preserves the original error as cause", async () => {
-		const original = new Error("socket hang up");
+	it('wraps a transport failure and preserves the original error as cause', async () => {
+		const original = new Error('socket hang up');
 		const fetcher: HttpFetcher = () => Promise.reject(original);
 		let caught: unknown;
 		try {
-			await fetchAndParseFeed(fetcher, "https://host.example/feed");
+			await fetchAndParseFeed(fetcher, 'https://host.example/feed');
 		} catch (err: unknown) {
 			caught = err;
 		}
@@ -100,69 +105,71 @@ describe("fetchAndParseFeed", () => {
 	});
 });
 
-describe("mapRawItemToFeedItem", () => {
+describe('mapRawItemToFeedItem', () => {
 	it("maps a podcast item (audio enclosure) to kind 'podcast' with media fields", () => {
-		const raw = firstRawItem("podcast-item.xml");
-		const item = mapRawItemToFeedItem(raw, "www.thegodjourney.com");
+		const raw = firstRawItem('podcast-item.xml');
+		const item = mapRawItemToFeedItem(raw, 'www.thegodjourney.com');
 
-		expect(item.kind).toBe("podcast");
+		expect(item.kind).toBe('podcast');
 		expect(item.mediaUrl).toBe(
-			"https://media.blubrry.com/the_god_journey/www.thegodjourney.com/audio/2026/260612.mp3",
+			'https://media.blubrry.com/the_god_journey/www.thegodjourney.com/audio/2026/260612.mp3',
 		);
-		expect(item.mediaType).toBe("audio/mpeg");
+		expect(item.mediaType).toBe('audio/mpeg');
 		expect(item.mediaBytes).toBe(43990159);
-		expect(item.sourceId).toBe("www.thegodjourney.com");
+		expect(item.sourceId).toBe('www.thegodjourney.com');
 	});
 
-	it("falls back to description for the body when content:encoded is absent", () => {
-		const raw = firstRawItem("podcast-item.xml");
-		const item = mapRawItemToFeedItem(raw, "host");
+	it('falls back to description for the body when content:encoded is absent', () => {
+		const raw = firstRawItem('podcast-item.xml');
+		const item = mapRawItemToFeedItem(raw, 'host');
 		// The podcast fixture carries its body in <description>, not content:encoded.
 		expect(item.contentHtml).toBe(
-			"<p>Wayne, Kyle, and Joni continue their conversation about patriarchy.</p>",
+			'<p>Wayne, Kyle, and Joni continue their conversation about patriarchy.</p>',
 		);
 	});
 
-	it("prefers content:encoded over description for the body", () => {
-		const raw = firstRawItem("substack-item.xml");
-		const item = mapRawItemToFeedItem(raw, "host");
-		expect(item.contentHtml).toContain("deeply personal and hard to write articles");
+	it('prefers content:encoded over description for the body', () => {
+		const raw = firstRawItem('substack-item.xml');
+		const item = mapRawItemToFeedItem(raw, 'host');
+		expect(item.contentHtml).toContain(
+			'deeply personal and hard to write articles',
+		);
 		expect(item.contentHtml).not.toBe(
-			"How I came to understand salvation apart from institutional belonging.",
+			'How I came to understand salvation apart from institutional belonging.',
 		);
 	});
 
-	it("classifies a non-audio/video enclosure (a cover image) as an article", () => {
-		const raw = firstRawItem("substack-item.xml");
-		const item = mapRawItemToFeedItem(raw, "host");
+	it('classifies a non-audio/video enclosure (a cover image) as an article', () => {
+		const raw = firstRawItem('substack-item.xml');
+		const item = mapRawItemToFeedItem(raw, 'host');
 		// The Substack item ships an image/jpeg cover enclosure, which is NOT media.
-		expect(item.kind).toBe("article");
-		expect(item.mediaType).toBe("image/jpeg");
+		expect(item.kind).toBe('article');
+		expect(item.mediaType).toBe('image/jpeg');
 	});
 
-	it("treats an enclosure length of 0 as a real value, not absent", () => {
-		const raw = firstRawItem("substack-item.xml");
-		const item = mapRawItemToFeedItem(raw, "host");
+	it('treats an enclosure length of 0 as a real value, not absent', () => {
+		const raw = firstRawItem('substack-item.xml');
+		const item = mapRawItemToFeedItem(raw, 'host');
 		expect(item.mediaBytes).toBe(0);
 		expect(item.mediaBytes).not.toBeNull();
 	});
 
-	it("uses the guid as id and the link as url", () => {
-		const raw = firstRawItem("substack-item.xml");
-		const item = mapRawItemToFeedItem(raw, "host");
+	it('uses the guid as id and the link as url', () => {
+		const raw = firstRawItem('substack-item.xml');
+		const item = mapRawItemToFeedItem(raw, 'host');
 		expect(item.id).toBe(
-			"https://jonathanmclernon.substack.com/p/if-im-not-saved-by-the-system-then",
+			'https://jonathanmclernon.substack.com/p/if-im-not-saved-by-the-system-then',
 		);
 		expect(item.url).toBe(
-			"https://jonathanmclernon.substack.com/p/if-im-not-saved-by-the-system-then",
+			'https://jonathanmclernon.substack.com/p/if-im-not-saved-by-the-system-then',
 		);
 	});
 
-	it("falls back to link for id when guid is absent", () => {
+	it('falls back to link for id when guid is absent', () => {
 		const raw: RawFeedItem = {
 			guid: null,
-			link: "https://host.example/post",
-			title: "T",
+			link: 'https://host.example/post',
+			title: 'T',
 			author: null,
 			pubDateIso: null,
 			contentHtml: null,
@@ -170,34 +177,36 @@ describe("mapRawItemToFeedItem", () => {
 			categories: [],
 			enclosure: null,
 		};
-		expect(mapRawItemToFeedItem(raw, "host").id).toBe("https://host.example/post");
+		expect(mapRawItemToFeedItem(raw, 'host').id).toBe(
+			'https://host.example/post',
+		);
 	});
 
-	it("derives a stable non-empty id from title+date when guid and link are both null", () => {
+	it('derives a stable non-empty id from title+date when guid and link are both null', () => {
 		const raw: RawFeedItem = {
 			guid: null,
 			link: null,
-			title: "Untitled-ish post",
+			title: 'Untitled-ish post',
 			author: null,
-			pubDateIso: "2026-06-14T00:00:00.000Z",
+			pubDateIso: '2026-06-14T00:00:00.000Z',
 			contentHtml: null,
 			description: null,
 			categories: [],
 			enclosure: null,
 		};
-		const id = mapRawItemToFeedItem(raw, "host").id;
+		const id = mapRawItemToFeedItem(raw, 'host').id;
 		expect(id.length).toBeGreaterThan(0);
-		expect(id).toContain("Untitled-ish post");
-		expect(id).toContain("2026-06-14T00:00:00.000Z");
+		expect(id).toContain('Untitled-ish post');
+		expect(id).toContain('2026-06-14T00:00:00.000Z');
 		// Deterministic: same input -> same id.
-		expect(mapRawItemToFeedItem(raw, "host").id).toBe(id);
+		expect(mapRawItemToFeedItem(raw, 'host').id).toBe(id);
 	});
 
-	it("never yields an empty id even with no title and no date", () => {
+	it('never yields an empty id even with no title and no date', () => {
 		const raw: RawFeedItem = {
 			guid: null,
 			link: null,
-			title: "",
+			title: '',
 			author: null,
 			pubDateIso: null,
 			contentHtml: null,
@@ -205,16 +214,16 @@ describe("mapRawItemToFeedItem", () => {
 			categories: [],
 			enclosure: null,
 		};
-		expect(mapRawItemToFeedItem(raw, "host").id.length).toBeGreaterThan(0);
+		expect(mapRawItemToFeedItem(raw, 'host').id.length).toBeGreaterThan(0);
 	});
 
-	it("falls back to a derived id when guid is an empty string", () => {
+	it('falls back to a derived id when guid is an empty string', () => {
 		// A present-but-empty guid is not a usable identity; the item must still
 		// get a non-empty deterministic id from its title.
 		const raw: RawFeedItem = {
-			guid: "",
+			guid: '',
 			link: null,
-			title: "A titled post",
+			title: 'A titled post',
 			author: null,
 			pubDateIso: null,
 			contentHtml: null,
@@ -222,46 +231,46 @@ describe("mapRawItemToFeedItem", () => {
 			categories: [],
 			enclosure: null,
 		};
-		const id = mapRawItemToFeedItem(raw, "host").id;
+		const id = mapRawItemToFeedItem(raw, 'host').id;
 		expect(id.length).toBeGreaterThan(0);
-		expect(id).toContain("A titled post");
+		expect(id).toContain('A titled post');
 	});
 
-	it("sets the conservative defaults a source may refine", () => {
-		const raw = firstRawItem("substack-item.xml");
-		const item = mapRawItemToFeedItem(raw, "host");
-		expect(item.audience).toBe("unknown");
+	it('sets the conservative defaults a source may refine', () => {
+		const raw = firstRawItem('substack-item.xml');
+		const item = mapRawItemToFeedItem(raw, 'host');
+		expect(item.audience).toBe('unknown');
 		expect(item.isTruncated).toBe(false);
 		expect(item.section).toBeNull();
-		expect(item.tags).toEqual(["Faith", "Salvation"]);
+		expect(item.tags).toEqual(['Faith', 'Salvation']);
 	});
 });
 
-describe("buildResolvedFeed", () => {
+describe('buildResolvedFeed', () => {
 	const resolved: ResolverResult = {
-		sourceType: "generic",
-		canonicalHost: "www.thegodjourney.com",
-		feedUrl: "https://www.thegodjourney.com/feed/podcast",
+		sourceType: 'generic',
+		canonicalHost: 'www.thegodjourney.com',
+		feedUrl: 'https://www.thegodjourney.com/feed/podcast',
 		handle: null,
 	};
 
-	it("builds a ResolvedFeed with publicationTitle, feedId, and sampleTitles", () => {
-		const parsed = parseFeed(fixture("generic-multi.xml"));
+	it('builds a ResolvedFeed with publicationTitle, feedId, and sampleTitles', () => {
+		const parsed = parseFeed(fixture('generic-multi.xml'));
 		const feed = buildResolvedFeed(resolved, parsed);
 
-		expect(feed.publicationTitle).toBe("The God Journey");
-		expect(feed.feedId).toBe("www.thegodjourney.com");
-		expect(feed.canonicalHost).toBe("www.thegodjourney.com");
-		expect(feed.feedUrl).toBe("https://www.thegodjourney.com/feed/podcast");
-		expect(feed.sourceType).toBe("generic");
+		expect(feed.publicationTitle).toBe('The God Journey');
+		expect(feed.feedId).toBe('www.thegodjourney.com');
+		expect(feed.canonicalHost).toBe('www.thegodjourney.com');
+		expect(feed.feedUrl).toBe('https://www.thegodjourney.com/feed/podcast');
+		expect(feed.sourceType).toBe('generic');
 		expect(feed.sampleTitles).toEqual([
-			"Patriarchy diminishes us all (#1039)",
-			"A plain article with no enclosure",
+			'Patriarchy diminishes us all (#1039)',
+			'A plain article with no enclosure',
 		]);
-		expect(feed.author).toBe("Wayne Jacobsen");
+		expect(feed.author).toBe('Wayne Jacobsen');
 	});
 
-	it("caps sampleTitles at five", () => {
+	it('caps sampleTitles at five', () => {
 		const items: RawFeedItem[] = [];
 		for (let i = 0; i < 9; i += 1) {
 			items.push({
@@ -277,18 +286,18 @@ describe("buildResolvedFeed", () => {
 			});
 		}
 		const feed = buildResolvedFeed(resolved, {
-			feedTitle: "Many",
+			feedTitle: 'Many',
 			feedLink: null,
 			items,
 		});
 		expect(feed.sampleTitles).toHaveLength(5);
-		expect(feed.sampleTitles[0]).toBe("Title 0");
-		expect(feed.sampleTitles[4]).toBe("Title 4");
+		expect(feed.sampleTitles[0]).toBe('Title 0');
+		expect(feed.sampleTitles[4]).toBe('Title 4');
 	});
 
-	it("handles an empty feed without throwing", () => {
+	it('handles an empty feed without throwing', () => {
 		const feed = buildResolvedFeed(resolved, {
-			feedTitle: "Empty",
+			feedTitle: 'Empty',
 			feedLink: null,
 			items: [],
 		});
@@ -297,147 +306,157 @@ describe("buildResolvedFeed", () => {
 	});
 });
 
-describe("mapArchivePostToFeedItem", () => {
-	const HOST = "kevin.substack.com";
-	const FEED_ID = "kevin.substack.com";
+describe('mapArchivePostToFeedItem', () => {
+	const HOST = 'kevin.substack.com';
+	const FEED_ID = 'kevin.substack.com';
 
-	it("maps id from the numeric id, url from canonical_url, and a null body", () => {
+	it('maps id from the numeric id, url from canonical_url, and a null body', () => {
 		const post = {
 			id: 555,
-			slug: "the-slug",
-			title: "An archive post",
-			post_date: "2024-12-01T08:00:00.000Z",
-			canonical_url: "https://kevin.substack.com/p/the-slug",
-			audience: "everyone",
-			type: "newsletter",
-			section_name: "Notes",
-			postTags: [{ name: "x" }],
-			publishedBylines: [{ name: "Kevin" }],
+			slug: 'the-slug',
+			title: 'An archive post',
+			post_date: '2024-12-01T08:00:00.000Z',
+			canonical_url: 'https://kevin.substack.com/p/the-slug',
+			audience: 'everyone',
+			type: 'newsletter',
+			section_name: 'Notes',
+			postTags: [{ name: 'x' }],
+			publishedBylines: [{ name: 'Kevin' }],
 		};
 		const item = mapArchivePostToFeedItem(post, FEED_ID, HOST);
 		expect(item).not.toBeNull();
-		expect(item?.id).toBe("555");
-		expect(item?.url).toBe("https://kevin.substack.com/p/the-slug");
-		expect(item?.author).toBe("Kevin");
-		expect(item?.audience).toBe("free");
-		expect(item?.section).toBe("Notes");
-		expect(item?.kind).toBe("article");
+		expect(item?.id).toBe('555');
+		expect(item?.url).toBe('https://kevin.substack.com/p/the-slug');
+		expect(item?.author).toBe('Kevin');
+		expect(item?.audience).toBe('free');
+		expect(item?.section).toBe('Notes');
+		expect(item?.kind).toBe('article');
 		expect(item?.contentHtml).toBeNull();
 		expect(item?.sourceId).toBe(FEED_ID);
 	});
 
-	it("maps only_paid to paid and type podcast to kind podcast", () => {
+	it('maps only_paid to paid and type podcast to kind podcast', () => {
 		const post = {
 			id: 1,
-			slug: "pod",
-			title: "Pod",
-			canonical_url: "https://kevin.substack.com/p/pod",
-			audience: "only_paid",
-			type: "podcast",
+			slug: 'pod',
+			title: 'Pod',
+			canonical_url: 'https://kevin.substack.com/p/pod',
+			audience: 'only_paid',
+			type: 'podcast',
 		};
 		const item = mapArchivePostToFeedItem(post, FEED_ID, HOST);
-		expect(item?.audience).toBe("paid");
-		expect(item?.kind).toBe("podcast");
+		expect(item?.audience).toBe('paid');
+		expect(item?.kind).toBe('podcast');
 	});
 
-	it("falls back to id=canonical_url when the numeric id is absent", () => {
+	it('falls back to id=canonical_url when the numeric id is absent', () => {
 		const post = {
-			slug: "no-id",
-			title: "No id",
-			canonical_url: "https://kevin.substack.com/p/no-id",
+			slug: 'no-id',
+			title: 'No id',
+			canonical_url: 'https://kevin.substack.com/p/no-id',
 		};
 		const item = mapArchivePostToFeedItem(post, FEED_ID, HOST);
-		expect(item?.id).toBe("https://kevin.substack.com/p/no-id");
+		expect(item?.id).toBe('https://kevin.substack.com/p/no-id');
 	});
 
-	it("builds the url from host+slug when canonical_url is absent", () => {
-		const post = { id: 9, slug: "from-slug", title: "From slug" };
+	it('builds the url from host+slug when canonical_url is absent', () => {
+		const post = { id: 9, slug: 'from-slug', title: 'From slug' };
 		const item = mapArchivePostToFeedItem(post, FEED_ID, HOST);
-		expect(item?.url).toBe("https://kevin.substack.com/p/from-slug");
-		expect(item?.id).toBe("9");
+		expect(item?.url).toBe('https://kevin.substack.com/p/from-slug');
+		expect(item?.id).toBe('9');
 	});
 
-	it("returns null when neither an id nor a canonical_url is present", () => {
-		expect(mapArchivePostToFeedItem({ title: "x" }, FEED_ID, HOST)).toBeNull();
+	it('returns null when neither an id nor a canonical_url is present', () => {
+		expect(
+			mapArchivePostToFeedItem({ title: 'x' }, FEED_ID, HOST),
+		).toBeNull();
 		expect(mapArchivePostToFeedItem(null, FEED_ID, HOST)).toBeNull();
 		expect(mapArchivePostToFeedItem(42, FEED_ID, HOST)).toBeNull();
 	});
 
-	it("tolerates malformed tag and byline entries", () => {
+	it('tolerates malformed tag and byline entries', () => {
 		const post = {
 			id: 2,
-			canonical_url: "https://kevin.substack.com/p/two",
-			postTags: [{ name: "ok" }, {}, "nope", { name: "" }],
-			publishedBylines: ["nope"],
+			canonical_url: 'https://kevin.substack.com/p/two',
+			postTags: [{ name: 'ok' }, {}, 'nope', { name: '' }],
+			publishedBylines: ['nope'],
 		};
 		const item = mapArchivePostToFeedItem(post, FEED_ID, HOST);
-		expect(item?.tags).toEqual(["ok"]);
+		expect(item?.tags).toEqual(['ok']);
 		expect(item?.author).toBeNull();
 	});
 });
 
-describe("mapArchivePayload", () => {
-	it("skips malformed entries but keeps the well-formed ones", () => {
+describe('mapArchivePayload', () => {
+	it('skips malformed entries but keeps the well-formed ones', () => {
 		const payload = [
-			{ title: "no identity" },
-			{ id: 1, canonical_url: "https://h.test/p/a", title: "A" },
+			{ title: 'no identity' },
+			{ id: 1, canonical_url: 'https://h.test/p/a', title: 'A' },
 			null,
-			{ id: 2, canonical_url: "https://h.test/p/b", title: "B" },
+			{ id: 2, canonical_url: 'https://h.test/p/b', title: 'B' },
 		];
-		const items = mapArchivePayload(payload, "h.test", "h.test");
-		expect(items.map((i) => i.id)).toEqual(["1", "2"]);
+		const items = mapArchivePayload(payload, 'h.test', 'h.test');
+		expect(items.map((i) => i.id)).toEqual(['1', '2']);
 	});
 
-	it("returns an empty list for a non-array payload", () => {
-		expect(mapArchivePayload(null, "h.test", "h.test")).toEqual([]);
-		expect(mapArchivePayload({ not: "an array" }, "h.test", "h.test")).toEqual([]);
+	it('returns an empty list for a non-array payload', () => {
+		expect(mapArchivePayload(null, 'h.test', 'h.test')).toEqual([]);
+		expect(
+			mapArchivePayload({ not: 'an array' }, 'h.test', 'h.test'),
+		).toEqual([]);
 	});
 });
 
-describe("readPostBodyHtml", () => {
-	it("reads a non-empty body_html string", () => {
-		expect(readPostBodyHtml({ body_html: "<p>x</p>" })).toBe("<p>x</p>");
+describe('readPostBodyHtml', () => {
+	it('reads a non-empty body_html string', () => {
+		expect(readPostBodyHtml({ body_html: '<p>x</p>' })).toBe('<p>x</p>');
 	});
 
-	it("returns null for a missing, empty, or non-string body_html", () => {
+	it('returns null for a missing, empty, or non-string body_html', () => {
 		expect(readPostBodyHtml({})).toBeNull();
-		expect(readPostBodyHtml({ body_html: "" })).toBeNull();
+		expect(readPostBodyHtml({ body_html: '' })).toBeNull();
 		expect(readPostBodyHtml({ body_html: 5 })).toBeNull();
 		expect(readPostBodyHtml(null)).toBeNull();
 	});
 });
 
-describe("hostAndSlugFromPostUrl", () => {
-	it("extracts host and slug from a /p/<slug> permalink", () => {
-		expect(hostAndSlugFromPostUrl("https://kevin.substack.com/p/the-slug")).toEqual({
-			host: "kevin.substack.com",
-			slug: "the-slug",
+describe('hostAndSlugFromPostUrl', () => {
+	it('extracts host and slug from a /p/<slug> permalink', () => {
+		expect(
+			hostAndSlugFromPostUrl('https://kevin.substack.com/p/the-slug'),
+		).toEqual({
+			host: 'kevin.substack.com',
+			slug: 'the-slug',
 		});
 	});
 
-	it("ignores trailing path and query after the slug", () => {
+	it('ignores trailing path and query after the slug', () => {
 		expect(
-			hostAndSlugFromPostUrl("https://kevin.substack.com/p/the-slug/comments?x=1"),
-		).toEqual({ host: "kevin.substack.com", slug: "the-slug" });
+			hostAndSlugFromPostUrl(
+				'https://kevin.substack.com/p/the-slug/comments?x=1',
+			),
+		).toEqual({ host: 'kevin.substack.com', slug: 'the-slug' });
 	});
 
-	it("returns null for a url with no /p/<slug> segment or an unparsable url", () => {
-		expect(hostAndSlugFromPostUrl("https://kevin.substack.com/about")).toBeNull();
-		expect(hostAndSlugFromPostUrl("not a url")).toBeNull();
-		expect(hostAndSlugFromPostUrl("")).toBeNull();
+	it('returns null for a url with no /p/<slug> segment or an unparsable url', () => {
+		expect(
+			hostAndSlugFromPostUrl('https://kevin.substack.com/about'),
+		).toBeNull();
+		expect(hostAndSlugFromPostUrl('not a url')).toBeNull();
+		expect(hostAndSlugFromPostUrl('')).toBeNull();
 	});
 });
 
-describe("applyLimit", () => {
-	it("returns the list unchanged when no limit is given", () => {
+describe('applyLimit', () => {
+	it('returns the list unchanged when no limit is given', () => {
 		expect(applyLimit([1, 2, 3], undefined)).toEqual([1, 2, 3]);
 	});
 
-	it("returns the list unchanged for a non-positive limit", () => {
+	it('returns the list unchanged for a non-positive limit', () => {
 		expect(applyLimit([1, 2, 3], 0)).toEqual([1, 2, 3]);
 	});
 
-	it("keeps only the first N items for a positive limit", () => {
+	it('keeps only the first N items for a positive limit', () => {
 		expect(applyLimit([1, 2, 3, 4], 2)).toEqual([1, 2]);
 	});
 });

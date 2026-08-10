@@ -20,7 +20,7 @@
  */
 
 /** A media enclosure attached to an item (podcast audio, cover image, ...). */
-export interface RawEnclosure {
+interface RawEnclosure {
 	url: string;
 	type: string | null;
 	length: number | null;
@@ -62,7 +62,7 @@ export interface ParsedFeed {
 export class FeedParseError extends Error {
 	constructor(message: string) {
 		super(message);
-		this.name = "FeedParseError";
+		this.name = 'FeedParseError';
 	}
 }
 
@@ -82,7 +82,9 @@ function readText(
 	directOnly: boolean,
 ): string | null {
 	const wanted = names.map((n) => n.toLowerCase());
-	const scope = directOnly ? parent.children : parent.getElementsByTagName("*");
+	const scope = directOnly
+		? parent.children
+		: parent.getElementsByTagName('*');
 	for (let i = 0; i < scope.length; i += 1) {
 		const el = scope.item(i);
 		if (el === null) {
@@ -92,9 +94,6 @@ function readText(
 			continue;
 		}
 		const text = el.textContent;
-		if (text === null) {
-			continue;
-		}
 		const trimmed = text.trim();
 		if (trimmed.length > 0) {
 			return trimmed;
@@ -178,28 +177,28 @@ function toIso(raw: string | null): string | null {
  * is present (an enclosure without a url is not actionable).
  */
 function readEnclosure(item: Element): RawEnclosure | null {
-	const rssEnclosure = findChild(item, ["enclosure"]);
+	const rssEnclosure = findChild(item, ['enclosure']);
 	if (rssEnclosure !== null) {
-		const url = rssEnclosure.getAttribute("url");
+		const url = rssEnclosure.getAttribute('url');
 		if (url !== null && url.trim().length > 0) {
 			return {
 				url: url.trim(),
-				type: emptyToNull(rssEnclosure.getAttribute("type")),
-				length: parseIntAttr(rssEnclosure.getAttribute("length")),
+				type: emptyToNull(rssEnclosure.getAttribute('type')),
+				length: parseIntAttr(rssEnclosure.getAttribute('length')),
 			};
 		}
 	}
 
-	for (const link of findChildren(item, ["link"])) {
-		if ((link.getAttribute("rel") ?? "").toLowerCase() !== "enclosure") {
+	for (const link of findChildren(item, ['link'])) {
+		if ((link.getAttribute('rel') ?? '').toLowerCase() !== 'enclosure') {
 			continue;
 		}
-		const href = link.getAttribute("href");
+		const href = link.getAttribute('href');
 		if (href !== null && href.trim().length > 0) {
 			return {
 				url: href.trim(),
-				type: emptyToNull(link.getAttribute("type")),
-				length: parseIntAttr(link.getAttribute("length")),
+				type: emptyToNull(link.getAttribute('type')),
+				length: parseIntAttr(link.getAttribute('length')),
 			};
 		}
 	}
@@ -221,14 +220,14 @@ function emptyToNull(value: string | null): string | null {
  * rel) being the canonical permalink; enclosure/self links are skipped.
  */
 function readItemLink(item: Element): string | null {
-	const links = findChildren(item, ["link"]);
+	const links = findChildren(item, ['link']);
 	// Prefer an Atom alternate/relless link via href.
 	for (const link of links) {
-		const rel = (link.getAttribute("rel") ?? "alternate").toLowerCase();
-		if (rel === "enclosure" || rel === "self") {
+		const rel = (link.getAttribute('rel') ?? 'alternate').toLowerCase();
+		if (rel === 'enclosure' || rel === 'self') {
 			continue;
 		}
-		const href = link.getAttribute("href");
+		const href = link.getAttribute('href');
 		if (href !== null && href.trim().length > 0) {
 			return href.trim();
 		}
@@ -236,7 +235,7 @@ function readItemLink(item: Element): string | null {
 	// Fall back to RSS <link> text content.
 	for (const link of links) {
 		const text = link.textContent;
-		if (text !== null && text.trim().length > 0) {
+		if (text.trim().length > 0) {
 			return text.trim();
 		}
 	}
@@ -249,18 +248,18 @@ function readItemLink(item: Element): string | null {
  * first, then an Atom <author><name>, then a plain <author> text node.
  */
 function readAuthor(item: Element): string | null {
-	const creator = readText(item, ["creator"], true);
+	const creator = readText(item, ['creator'], true);
 	if (creator !== null) {
 		return creator;
 	}
-	const authorEl = findChild(item, ["author"]);
+	const authorEl = findChild(item, ['author']);
 	if (authorEl !== null) {
-		const name = readText(authorEl, ["name"], true);
+		const name = readText(authorEl, ['name'], true);
 		if (name !== null) {
 			return name;
 		}
 		const text = authorEl.textContent;
-		if (text !== null && text.trim().length > 0) {
+		if (text.trim().length > 0) {
 			return text.trim();
 		}
 	}
@@ -275,10 +274,10 @@ function readAuthor(item: Element): string | null {
 function readCategories(item: Element): string[] {
 	const out: string[] = [];
 	const seen = new Set<string>();
-	for (const cat of findChildren(item, ["category"])) {
-		const term = emptyToNull(cat.getAttribute("term"));
-		const text = cat.textContent === null ? null : cat.textContent.trim();
-		const value = term ?? (text !== null && text.length > 0 ? text : null);
+	for (const cat of findChildren(item, ['category'])) {
+		const term = emptyToNull(cat.getAttribute('term'));
+		const text = cat.textContent.trim();
+		const value = term ?? (text.length > 0 ? text : null);
 		if (value === null) {
 			continue;
 		}
@@ -294,12 +293,20 @@ function readCategories(item: Element): string[] {
 
 /** Map a single <item> (RSS) or <entry> (Atom) element to a RawFeedItem. */
 function readItem(item: Element): RawFeedItem {
-	const title = readText(item, ["title"], true) ?? "";
-	const contentHtml = readText(item, ["encoded", "content"], true);
-	const description = readText(item, ["description", "summary", "subtitle"], true);
-	const pubDate = readText(item, ["pubdate", "published", "updated", "date"], true);
+	const title = readText(item, ['title'], true) ?? '';
+	const contentHtml = readText(item, ['encoded', 'content'], true);
+	const description = readText(
+		item,
+		['description', 'summary', 'subtitle'],
+		true,
+	);
+	const pubDate = readText(
+		item,
+		['pubdate', 'published', 'updated', 'date'],
+		true,
+	);
 	return {
-		guid: readText(item, ["guid", "id"], true),
+		guid: readText(item, ['guid', 'id'], true),
 		link: readItemLink(item),
 		title,
 		author: readAuthor(item),
@@ -321,17 +328,17 @@ function locateRoot(
 ): { root: Element; items: Element[]; isAtom: boolean } | null {
 	// RSS: <rss><channel>...</channel></rss> (channel may also be the doc root in
 	// RDF-flavored feeds, so scan by localName rather than assuming the path).
-	const channels = doc.getElementsByTagName("channel");
+	const channels = doc.getElementsByTagName('channel');
 	const channel = channels.item(0);
 	if (channel !== null) {
-		const items = findChildren(channel, ["item"]);
+		const items = findChildren(channel, ['item']);
 		return { root: channel, items, isAtom: false };
 	}
 
 	// Atom: <feed><entry>...</entry></feed>.
 	const root = doc.documentElement;
-	if (root !== null && root.localName.toLowerCase() === "feed") {
-		const entries = findChildren(root, ["entry"]);
+	if (root?.localName.toLowerCase() === 'feed') {
+		const entries = findChildren(root, ['entry']);
 		return { root, items: entries, isAtom: true };
 	}
 	return null;
@@ -340,15 +347,15 @@ function locateRoot(
 /** Resolve the feed-level canonical link for RSS vs Atom roots. */
 function readFeedLink(root: Element, isAtom: boolean): string | null {
 	if (!isAtom) {
-		return readText(root, ["link"], true);
+		return readText(root, ['link'], true);
 	}
 	// Atom feed: prefer the alternate link's href.
-	for (const link of findChildren(root, ["link"])) {
-		const rel = (link.getAttribute("rel") ?? "alternate").toLowerCase();
-		if (rel === "self") {
+	for (const link of findChildren(root, ['link'])) {
+		const rel = (link.getAttribute('rel') ?? 'alternate').toLowerCase();
+		if (rel === 'self') {
 			continue;
 		}
-		const href = emptyToNull(link.getAttribute("href"));
+		const href = emptyToNull(link.getAttribute('href'));
 		if (href !== null) {
 			return href;
 		}
@@ -367,27 +374,30 @@ function readFeedLink(root: Element, isAtom: boolean): string | null {
  * safely in environments without a DOM.
  */
 export function parseFeed(xml: string): ParsedFeed {
-	if (typeof xml !== "string" || xml.trim().length === 0) {
-		throw new FeedParseError("Feed XML was empty.");
+	if (typeof xml !== 'string' || xml.trim().length === 0) {
+		throw new FeedParseError('Feed XML was empty.');
 	}
 
-	const doc = new DOMParser().parseFromString(xml, "text/xml");
+	const doc = new DOMParser().parseFromString(xml, 'text/xml');
 
 	// DOMParser does not throw on malformed XML; it returns a document whose body
 	// contains a <parsererror> element. Detect it explicitly.
-	const parserError = doc.getElementsByTagName("parsererror").item(0);
+	const parserError = doc.getElementsByTagName('parsererror').item(0);
 	if (parserError !== null) {
 		const detail = parserError.textContent;
-		const reason = detail !== null && detail.trim().length > 0 ? detail.trim() : "unknown reason";
+		const reason =
+			detail.trim().length > 0 ? detail.trim() : 'unknown reason';
 		throw new FeedParseError(`Feed XML could not be parsed: ${reason}`);
 	}
 
 	const located = locateRoot(doc);
 	if (located === null) {
-		throw new FeedParseError("Feed XML has no RSS <channel> or Atom <feed> root.");
+		throw new FeedParseError(
+			'Feed XML has no RSS <channel> or Atom <feed> root.',
+		);
 	}
 
-	const feedTitle = readText(located.root, ["title"], true) ?? "";
+	const feedTitle = readText(located.root, ['title'], true) ?? '';
 	const feedLink = readFeedLink(located.root, located.isAtom);
 	const items = located.items.map((item) => readItem(item));
 

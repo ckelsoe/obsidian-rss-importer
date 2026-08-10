@@ -17,7 +17,7 @@
  * The pacer depends only on the `HttpFetcher` contract, never on Obsidian.
  */
 
-import type { HttpFetcher, HttpRequest, HttpResponse } from "./feed-source";
+import type { HttpFetcher, HttpRequest, HttpResponse } from './feed-source';
 
 /** Upper bound on a single backoff wait, in milliseconds. */
 const MAX_BACKOFF_MS = 60_000;
@@ -69,7 +69,10 @@ export function parseRetryAfterMs(value: string | undefined): number | null {
  * `HttpResponse.headers` does not guarantee lowercased keys, so match by
  * comparing lowercased names rather than assuming a casing.
  */
-function getHeader(headers: Record<string, string>, name: string): string | undefined {
+function getHeader(
+	headers: Record<string, string>,
+	name: string,
+): string | undefined {
 	const target = name.toLowerCase();
 	for (const key of Object.keys(headers)) {
 		if (key.toLowerCase() === target) {
@@ -142,8 +145,13 @@ export class FetchPacer {
 		let attemptsLeft = this.maxRetries;
 
 		while (response.status === HTTP_TOO_MANY_REQUESTS && attemptsLeft > 0) {
-			const retryAfterMs = parseRetryAfterMs(getHeader(response.headers, "Retry-After"));
-			const waitMs = Math.min(retryAfterMs ?? this.delayMs, MAX_BACKOFF_MS);
+			const retryAfterMs = parseRetryAfterMs(
+				getHeader(response.headers, 'Retry-After'),
+			);
+			const waitMs = Math.min(
+				retryAfterMs ?? this.delayMs,
+				MAX_BACKOFF_MS,
+			);
 			if (waitMs > 0) {
 				await this.sleep(waitMs);
 			}

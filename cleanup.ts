@@ -13,6 +13,8 @@
 // The module imports nothing from `obsidian` and touches no DOM, so it is fully
 // unit-testable in the node jest environment.
 
+import { trimTrailingChars } from './text-trim';
+
 /**
  * The deterministic cleanup rules for one feed. Both fields are required here;
  * the settings layer resolves per-feed overrides against global defaults and
@@ -40,7 +42,8 @@ const SHORT_PARAGRAPH_NON_LINK_LIMIT = 300;
 // A line that is ONLY a Markdown horizontal rule: three or more of -, *, or _,
 // optionally separated by spaces, and nothing else. Matches ---, ***, ___,
 // "- - -", "* * *", etc.
-const HORIZONTAL_RULE = /^[ \t]*(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$/;
+const HORIZONTAL_RULE =
+	/^[ \t]*(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$/;
 
 /**
  * Apply the deterministic cleanup rules to a note BODY (never frontmatter).
@@ -100,7 +103,7 @@ export function splitFrontmatter(content: string): NoteParts {
 	// with the frontmatter so the body starts at real content.
 	const match = content.match(/^---\r?\n[\s\S]*?\r?\n---[ \t]*(?:\r?\n|$)/);
 	if (match === null) {
-		return { frontmatter: "", body: content };
+		return { frontmatter: '', body: content };
 	}
 	const frontmatter = match[0];
 	return { frontmatter, body: content.slice(frontmatter.length) };
@@ -127,7 +130,7 @@ function normalizeHosts(hosts: readonly string[]): string[] {
  * line itself is removed along with the footer it introduces.
  */
 function trimAfterLastHorizontalRule(body: string): string {
-	const lines = body.split("\n");
+	const lines = body.split('\n');
 	let lastRuleIndex = -1;
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i];
@@ -138,7 +141,7 @@ function trimAfterLastHorizontalRule(body: string): string {
 	if (lastRuleIndex === -1) {
 		return body;
 	}
-	return lines.slice(0, lastRuleIndex).join("\n");
+	return lines.slice(0, lastRuleIndex).join('\n');
 }
 
 /**
@@ -147,13 +150,16 @@ function trimAfterLastHorizontalRule(body: string): string {
  * candidate blocks too: a bullet list whose items each link a promo host has
  * each offending item dropped without disturbing the others.
  */
-function dropPromotionalLinkBlocks(body: string, hosts: readonly string[]): string {
+function dropPromotionalLinkBlocks(
+	body: string,
+	hosts: readonly string[],
+): string {
 	const blocks = body.split(/\n[ \t]*\n/);
 	const kept: string[] = [];
 	for (const block of blocks) {
 		kept.push(filterBlock(block, hosts));
 	}
-	return kept.join("\n\n");
+	return kept.join('\n\n');
 }
 
 /**
@@ -162,16 +168,18 @@ function dropPromotionalLinkBlocks(body: string, hosts: readonly string[]): stri
  * Otherwise the block is judged as a whole: kept or dropped.
  */
 function filterBlock(block: string, hosts: readonly string[]): string {
-	const lines = block.split("\n");
+	const lines = block.split('\n');
 	const allListItems =
-		lines.length > 0 && lines.every((line) => line.trim().length === 0 || isListItem(line));
+		lines.length > 0 &&
+		lines.every((line) => line.trim().length === 0 || isListItem(line));
 	if (allListItems) {
 		const keptLines = lines.filter(
-			(line) => line.trim().length === 0 || !isPromotionalLinkLine(line, hosts),
+			(line) =>
+				line.trim().length === 0 || !isPromotionalLinkLine(line, hosts),
 		);
-		return keptLines.join("\n");
+		return keptLines.join('\n');
 	}
-	return isPromotionalBlock(block, hosts) ? "" : block;
+	return isPromotionalBlock(block, hosts) ? '' : block;
 }
 
 /** True when a line is a Markdown list item (-, *, +, or an ordered "1." form). */
@@ -184,7 +192,10 @@ function isListItem(line: string): boolean {
  * and its non-link text is short (a one-line bullet, not a long sentence that
  * happens to cite a promo host).
  */
-function isPromotionalLinkLine(line: string, hosts: readonly string[]): boolean {
+function isPromotionalLinkLine(
+	line: string,
+	hosts: readonly string[],
+): boolean {
 	const links = extractLinks(line);
 	if (links.length === 0 || !someLinkHitsHost(links, hosts)) {
 		return false;
@@ -221,7 +232,7 @@ interface ExtractedLink {
 
 // Markdown inline link: [text](url). The url group stops at whitespace or the
 // closing paren so a trailing "title" or a following sentence is not captured.
-const MD_LINK = /\[[^\]]*\]\(\s*(<[^>]*>|[^()\s]+)[^)]*\)/g;
+const MD_LINK = /\[[^\][]*\]\([ \t]*(<[^><]*>|[^()\s<>]+)(?:[ \t][^)(]*)?\)/g;
 // Bare autolink: <https://...> or a naked http(s) URL. The angle-bracket form is
 // matched first; the naked form stops at whitespace or a closing angle bracket.
 const AUTOLINK = /<((?:https?|ftp):\/\/[^>\s]+)>|((?:https?):\/\/[^\s)<>]+)/g;
@@ -249,14 +260,17 @@ function extractLinks(block: string): ExtractedLink[] {
 }
 
 function stripAngleBrackets(url: string): string {
-	if (url.startsWith("<") && url.endsWith(">")) {
+	if (url.startsWith('<') && url.endsWith('>')) {
 		return url.slice(1, -1);
 	}
 	return url;
 }
 
 /** True when at least one of the links targets a configured promo host. */
-function someLinkHitsHost(links: readonly ExtractedLink[], hosts: readonly string[]): boolean {
+function someLinkHitsHost(
+	links: readonly ExtractedLink[],
+	hosts: readonly string[],
+): boolean {
 	return links.some((link) => hostMatches(link.url, hosts));
 }
 
@@ -274,9 +288,9 @@ function hostMatches(url: string, hosts: readonly string[]): boolean {
 function nonLinkText(block: string, links: readonly ExtractedLink[]): string {
 	let text = block;
 	for (const link of links) {
-		text = text.split(link.match).join(" ");
+		text = text.split(link.match).join(' ');
 	}
-	return text.replace(/\s+/g, " ").trim();
+	return text.replace(/\s+/g, ' ').trim();
 }
 
 /**
@@ -285,9 +299,14 @@ function nonLinkText(block: string, links: readonly ExtractedLink[]): string {
  * blank lines between real blocks are preserved so paragraph structure survives.
  */
 function collapseBlankLines(body: string): string {
-	return body
-		.replace(/[ \t]+\n/g, "\n")
-		.replace(/\n{3,}/g, "\n\n")
-		.replace(/^\n+/, "")
-		.replace(/\n+$/, "");
+	const noTrailingSpaces = body
+		.split('\n')
+		.map((line, i, lines) =>
+			i < lines.length - 1 ? trimTrailingChars(line, ' \t') : line,
+		)
+		.join('\n');
+	const collapsed = noTrailingSpaces
+		.replace(/\n{3,}/g, '\n\n')
+		.replace(/^\n+/, '');
+	return trimTrailingChars(collapsed, '\n');
 }

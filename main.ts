@@ -4,9 +4,16 @@ import {
 	TFile,
 	requestUrl,
 	type RequestUrlResponse,
-} from "obsidian";
+} from 'obsidian';
+import { trimChars } from './text-trim';
 
-import type { FeedSource, HttpFetcher, HttpRequest, HttpResponse, SourceType } from "./feed-source";
+import type {
+	FeedSource,
+	HttpFetcher,
+	HttpRequest,
+	HttpResponse,
+	SourceType,
+} from './feed-source';
 import {
 	DEFAULT_SETTINGS,
 	buildCleanupConfig,
@@ -18,39 +25,47 @@ import {
 	effectiveMediaOutsideFolder,
 	effectiveMediaSubfolder,
 	effectiveNoteNameTemplate,
+	type DuplicatePolicy,
 	type FeedConfig,
+	type ImagesMode,
+	type MediaLocation,
 	type RssImporterSettings,
-} from "./settings";
-import { GenericRssFeedSource } from "./source-generic";
-import { SubstackFeedSource } from "./source-substack";
-import { FetchPacer } from "./fetch-pacer";
+} from './settings';
+import { GenericRssFeedSource } from './source-generic';
+import { SubstackFeedSource } from './source-substack';
+import { FetchPacer } from './fetch-pacer';
 import {
 	NoteWriter,
 	type DuplicatePromptCallback,
 	type DuplicatePromptDecision,
-} from "./note-writer";
-import { convertHtmlToMarkdown } from "./html-converter";
-import { applyCleanup, splitFrontmatter } from "./cleanup";
-import { ImageDownloader } from "./image-downloader";
-import { MediaDownloader } from "./media-downloader";
-import { DismissStore } from "./dismiss-store";
-import { BufferedDebugLogger } from "./debug-logger";
-import { ImportRunner } from "./import-runner";
-import { ImportModal } from "./import-modal";
-import { AddFeedModal } from "./add-feed-modal";
-import { FeedPickerModal } from "./feed-picker-modal";
-import { DuplicatePromptModal } from "./duplicate-prompt-modal";
-import { RssImporterSettingTab, type RssImporterPluginLike } from "./settings-tab";
+} from './note-writer';
+import { convertHtmlToMarkdown } from './html-converter';
+import { applyCleanup, splitFrontmatter } from './cleanup';
+import { ImageDownloader } from './image-downloader';
+import { MediaDownloader } from './media-downloader';
+import { DismissStore } from './dismiss-store';
+import { BufferedDebugLogger } from './debug-logger';
+import { ImportRunner } from './import-runner';
+import { ImportModal } from './import-modal';
+import { AddFeedModal } from './add-feed-modal';
+import { FeedPickerModal } from './feed-picker-modal';
+import { DuplicatePromptModal } from './duplicate-prompt-modal';
+import {
+	RssImporterSettingTab,
+	type RssImporterPluginLike,
+} from './settings-tab';
 
 // Adapt Obsidian's requestUrl to the plugin's HttpFetcher contract. requestUrl
 // (not fetch) is required to avoid CORS and certificate issues on Electron, and
 // it is the only HTTP path Obsidian sanctions for plugins. `throw: false` lets
 // the sources map status codes themselves (3xx redirect walking, 429 backoff)
 // instead of Obsidian throwing first.
-const obsidianFetcher: HttpFetcher = async (req: HttpRequest): Promise<HttpResponse> => {
+const obsidianFetcher: HttpFetcher = async (
+	req: HttpRequest,
+): Promise<HttpResponse> => {
 	const response = await requestUrl({
 		url: req.url,
-		method: req.method ?? "GET",
+		method: req.method ?? 'GET',
 		headers: req.headers ? { ...req.headers } : undefined,
 		body: req.body,
 		throw: false,
@@ -59,7 +74,7 @@ const obsidianFetcher: HttpFetcher = async (req: HttpRequest): Promise<HttpRespo
 		status: response.status,
 		headers: response.headers ?? {},
 		json: safeJson(response),
-		text: response.text ?? "",
+		text: response.text ?? '',
 		arrayBuffer: response.arrayBuffer ?? new ArrayBuffer(0),
 	};
 };
@@ -84,7 +99,8 @@ function safeJson(response: RequestUrlResponse): unknown {
 function runGuarded(action: string, fn: () => Promise<void>): void {
 	fn().catch((err: unknown) => {
 		console.error(`RSS Importer: ${action} failed`, err);
-		const detail = err instanceof Error ? err.message : "See the console for details.";
+		const detail =
+			err instanceof Error ? err.message : 'See the console for details.';
 		new Notice(`${action} failed. ${detail}`);
 	});
 }
@@ -92,22 +108,25 @@ function runGuarded(action: string, fn: () => Promise<void>): void {
 // Type guards for the per-feed literal-union fields read from data.json. Stored
 // settings are user-editable JSON, so a value can be missing or a wrong literal;
 // these narrow to the known unions before the value is trusted.
-function isImagesMode(value: unknown): value is import("./settings").ImagesMode {
-	return value === "link" || value === "download";
+function isImagesMode(value: unknown): value is ImagesMode {
+	return value === 'link' || value === 'download';
 }
 
-function isDuplicatePolicy(value: unknown): value is import("./settings").DuplicatePolicy {
-	return value === "skip" || value === "overwrite" || value === "prompt";
+function isDuplicatePolicy(value: unknown): value is DuplicatePolicy {
+	return value === 'skip' || value === 'overwrite' || value === 'prompt';
 }
 
-function isMediaLocation(value: unknown): value is import("./settings").MediaLocation {
-	return value === "vault" || value === "outside";
+function isMediaLocation(value: unknown): value is MediaLocation {
+	return value === 'vault' || value === 'outside';
 }
 
 // Narrow a stored value to an array of strings (the shape of a cleanup host
 // list). Used to validate both the global default and per-feed overrides.
 function isStringArray(value: unknown): value is string[] {
-	return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+	return (
+		Array.isArray(value) &&
+		value.every((entry) => typeof entry === 'string')
+	);
 }
 
 // Best-effort recovery of a host list from a malformed stored value: keep the
@@ -115,7 +134,9 @@ function isStringArray(value: unknown): value is string[] {
 // the global field, which always has a value (unlike droppable per-feed fields).
 function coerceStringArray(value: unknown, fallback: string[]): string[] {
 	if (Array.isArray(value)) {
-		return value.filter((entry): entry is string => typeof entry === "string");
+		return value.filter(
+			(entry): entry is string => typeof entry === 'string',
+		);
 	}
 	return [...fallback];
 }
@@ -127,17 +148,20 @@ function coerceStringArray(value: unknown, fallback: string[]): string[] {
 function classifyInputSourceType(input: string): SourceType {
 	const trimmed = input.trim().toLowerCase();
 	if (
-		trimmed.startsWith("@") ||
-		trimmed.includes("substack.com/@") ||
+		trimmed.startsWith('@') ||
+		trimmed.includes('substack.com/@') ||
 		/(^|\/\/|\.)substack\.com(\/|$)/.test(trimmed) ||
-		trimmed.includes(".substack.com")
+		trimmed.includes('.substack.com')
 	) {
-		return "substack";
+		return 'substack';
 	}
-	return "generic";
+	return 'generic';
 }
 
-export default class RssImporterPlugin extends Plugin implements RssImporterPluginLike {
+export default class RssImporterPlugin
+	extends Plugin
+	implements RssImporterPluginLike
+{
 	settings: RssImporterSettings = DEFAULT_SETTINGS;
 	debugLogger: BufferedDebugLogger = new BufferedDebugLogger(false);
 	private dismissStore!: DismissStore;
@@ -164,56 +188,60 @@ export default class RssImporterPlugin extends Plugin implements RssImporterPlug
 			this.addSettingTab(new RssImporterSettingTab(this.app, this));
 
 			this.addCommand({
-				id: "import",
-				name: "Import from a feed",
+				id: 'import',
+				name: 'Import from a feed',
 				callback: () => {
 					this.launchImport();
 				},
 			});
 			this.addCommand({
-				id: "add-feed",
-				name: "Add feed",
+				id: 'add-feed',
+				name: 'Add feed',
 				callback: () => {
 					this.openAddFeed();
 				},
 			});
 			this.addCommand({
-				id: "clean-up-notes",
-				name: "Clean up imported notes",
+				id: 'clean-up-notes',
+				name: 'Clean up imported notes',
 				callback: () => {
 					this.launchCleanup();
 				},
 			});
 			this.addCommand({
-				id: "export-debug-log",
-				name: "Export debug log",
+				id: 'export-debug-log',
+				name: 'Export debug log',
 				callback: () => {
-					runGuarded("Export debug log", () => this.exportDebugLog());
+					runGuarded('Export debug log', () => this.exportDebugLog());
 				},
 			});
 			this.addCommand({
-				id: "clear-debug-log",
-				name: "Clear debug log",
+				id: 'clear-debug-log',
+				name: 'Clear debug log',
 				callback: () => {
 					this.debugLogger.clear();
-					new Notice("Debug log cleared");
+					new Notice('Debug log cleared');
 				},
 			});
 
 			this.updateRibbonIcon();
 		} catch (err) {
-			console.error("RSS Importer failed to load", err);
+			console.error('RSS Importer failed to load', err);
 			new Notice(
-				`RSS importer failed to load. ${err instanceof Error ? err.message : "See the console for details."}`,
+				`RSS importer failed to load. ${err instanceof Error ? err.message : 'See the console for details.'}`,
 			);
 			throw err;
 		}
 	}
 
 	async loadSettings(): Promise<void> {
-		const stored = (await this.loadData()) as Partial<RssImporterSettings> | null;
+		const stored =
+			(await this.loadData()) as Partial<RssImporterSettings> | null;
 		this.settings = { ...DEFAULT_SETTINGS, ...(stored ?? {}) };
-		if (typeof this.settings.dismissed !== "object" || this.settings.dismissed === null) {
+		// dismissed is typed as an object but comes from untrusted loadData(), so
+		// validate through `unknown` where a null is genuinely reachable.
+		const dismissed: unknown = this.settings.dismissed;
+		if (typeof dismissed !== 'object' || dismissed === null) {
 			this.settings.dismissed = {};
 		}
 		if (!Array.isArray(this.settings.feeds)) {
@@ -242,8 +270,9 @@ export default class RssImporterPlugin extends Plugin implements RssImporterPlug
 				DEFAULT_SETTINGS.cleanupLinkHosts,
 			);
 		}
-		if (typeof this.settings.cleanupTrimAfterLastRule !== "boolean") {
-			this.settings.cleanupTrimAfterLastRule = DEFAULT_SETTINGS.cleanupTrimAfterLastRule;
+		if (typeof this.settings.cleanupTrimAfterLastRule !== 'boolean') {
+			this.settings.cleanupTrimAfterLastRule =
+				DEFAULT_SETTINGS.cleanupTrimAfterLastRule;
 		}
 		for (const feed of this.settings.feeds) {
 			// The per-feed override fields are optional literal/string unions on
@@ -251,37 +280,58 @@ export default class RssImporterPlugin extends Plugin implements RssImporterPlug
 			// wrong type. View the feed as a loose record to inspect and drop the
 			// bad override; deleting it makes the global default apply.
 			const record = feed as unknown as Record<string, unknown>;
-			if ("imagesMode" in record && !isImagesMode(record["imagesMode"])) {
-				delete record["imagesMode"];
+			if ('imagesMode' in record && !isImagesMode(record['imagesMode'])) {
+				delete record['imagesMode'];
 			}
-			if ("noteNameTemplate" in record && typeof record["noteNameTemplate"] !== "string") {
-				delete record["noteNameTemplate"];
+			if (
+				'noteNameTemplate' in record &&
+				typeof record['noteNameTemplate'] !== 'string'
+			) {
+				delete record['noteNameTemplate'];
 			}
-			if ("imageSubfolder" in record && typeof record["imageSubfolder"] !== "string") {
-				delete record["imageSubfolder"];
+			if (
+				'imageSubfolder' in record &&
+				typeof record['imageSubfolder'] !== 'string'
+			) {
+				delete record['imageSubfolder'];
 			}
-			if ("downloadMedia" in record && typeof record["downloadMedia"] !== "boolean") {
-				delete record["downloadMedia"];
+			if (
+				'downloadMedia' in record &&
+				typeof record['downloadMedia'] !== 'boolean'
+			) {
+				delete record['downloadMedia'];
 			}
-			if ("mediaLocation" in record && !isMediaLocation(record["mediaLocation"])) {
-				delete record["mediaLocation"];
+			if (
+				'mediaLocation' in record &&
+				!isMediaLocation(record['mediaLocation'])
+			) {
+				delete record['mediaLocation'];
 			}
-			if ("mediaSubfolder" in record && typeof record["mediaSubfolder"] !== "string") {
-				delete record["mediaSubfolder"];
+			if (
+				'mediaSubfolder' in record &&
+				typeof record['mediaSubfolder'] !== 'string'
+			) {
+				delete record['mediaSubfolder'];
 			}
-			if ("mediaOutsideFolder" in record && typeof record["mediaOutsideFolder"] !== "string") {
-				delete record["mediaOutsideFolder"];
+			if (
+				'mediaOutsideFolder' in record &&
+				typeof record['mediaOutsideFolder'] !== 'string'
+			) {
+				delete record['mediaOutsideFolder'];
 			}
 			// A per-feed cleanup host list must be an array of strings or be dropped
 			// so the global default applies. The trim flag must be a boolean.
-			if ("cleanupLinkHosts" in record && !isStringArray(record["cleanupLinkHosts"])) {
-				delete record["cleanupLinkHosts"];
+			if (
+				'cleanupLinkHosts' in record &&
+				!isStringArray(record['cleanupLinkHosts'])
+			) {
+				delete record['cleanupLinkHosts'];
 			}
 			if (
-				"cleanupTrimAfterLastRule" in record &&
-				typeof record["cleanupTrimAfterLastRule"] !== "boolean"
+				'cleanupTrimAfterLastRule' in record &&
+				typeof record['cleanupTrimAfterLastRule'] !== 'boolean'
 			) {
-				delete record["cleanupTrimAfterLastRule"];
+				delete record['cleanupTrimAfterLastRule'];
 			}
 		}
 	}
@@ -301,7 +351,7 @@ export default class RssImporterPlugin extends Plugin implements RssImporterPlug
 	makeSource(input: string): { source: FeedSource } {
 		const fetcher = this.makeFetcher();
 		const source: FeedSource =
-			classifyInputSourceType(input) === "substack"
+			classifyInputSourceType(input) === 'substack'
 				? new SubstackFeedSource({ fetcher })
 				: new GenericRssFeedSource({ fetcher });
 		return { source };
@@ -310,26 +360,28 @@ export default class RssImporterPlugin extends Plugin implements RssImporterPlug
 	// A fresh FetchPacer per session so each import or preview has its own
 	// sequential queue and the configured inter-request delay.
 	private makeFetcher(): HttpFetcher {
-		const pacer = new FetchPacer(obsidianFetcher, { delayMs: this.settings.requestDelayMs });
+		const pacer = new FetchPacer(obsidianFetcher, {
+			delayMs: this.settings.requestDelayMs,
+		});
 		return (req) => pacer.fetch(req);
 	}
 
 	private makeSourceForFeed(feed: FeedConfig): FeedSource {
 		const fetcher = this.makeFetcher();
-		return feed.sourceType === "substack"
+		return feed.sourceType === 'substack'
 			? new SubstackFeedSource({ fetcher })
 			: new GenericRssFeedSource({ fetcher });
 	}
 
 	private launchImport(): void {
 		if (this.settings.feeds.length === 0) {
-			new Notice("Add a feed first");
+			new Notice('Add a feed first');
 			this.openAddFeed();
 			return;
 		}
 		const feeds = this.settings.feeds.filter((f) => f.enabled);
 		if (feeds.length === 0) {
-			new Notice("Every feed is disabled. Enable one in settings.");
+			new Notice('Every feed is disabled. Enable one in settings.');
 			return;
 		}
 		if (feeds.length === 1) {
@@ -356,36 +408,64 @@ export default class RssImporterPlugin extends Plugin implements RssImporterPlug
 			const noteWriter = new NoteWriter({
 				vault: this.app.vault,
 				destinationFolder: feed.destinationFolder,
-				noteNameTemplate: effectiveNoteNameTemplate(feed, this.settings),
+				noteNameTemplate: effectiveNoteNameTemplate(
+					feed,
+					this.settings,
+				),
 				onDuplicate: this.settings.duplicatePolicy,
 				promptOnDuplicate: this.promptOnDuplicate,
 				tagDestination: this.settings.tagDestination,
 			});
 
-			let processImages: ((markdown: string, item: import("./feed-source").FeedItem) => Promise<string>) | undefined;
-			if (effectiveImagesMode(feed, this.settings) === "download") {
-				const downloader = new ImageDownloader({ fetcher: this.makeFetcher(), vault: this.app.vault });
+			let processImages:
+				| ((
+						markdown: string,
+						item: import('./feed-source').FeedItem,
+				  ) => Promise<string>)
+				| undefined;
+			if (effectiveImagesMode(feed, this.settings) === 'download') {
+				const downloader = new ImageDownloader({
+					fetcher: this.makeFetcher(),
+					vault: this.app.vault,
+				});
 				const subfolder = effectiveImageSubfolder(feed, this.settings);
 				const folderPath =
-					feed.destinationFolder === "" ? subfolder : `${feed.destinationFolder}/${subfolder}`;
-				processImages = (markdown) => downloader.downloadAndRewrite(markdown, folderPath);
+					feed.destinationFolder === ''
+						? subfolder
+						: `${feed.destinationFolder}/${subfolder}`;
+				processImages = (markdown) =>
+					downloader.downloadAndRewrite(markdown, folderPath);
 			}
 
-			let downloadMedia: ((item: import("./feed-source").FeedItem) => Promise<string | null>) | undefined;
+			let downloadMedia:
+				| ((
+						item: import('./feed-source').FeedItem,
+				  ) => Promise<string | null>)
+				| undefined;
 			if (effectiveDownloadMedia(feed, this.settings)) {
 				const mediaDownloader = new MediaDownloader({
 					fetcher: this.makeFetcher(),
 					vault: this.app.vault,
 				});
 				const location = effectiveMediaLocation(feed, this.settings);
-				const mediaSubfolder = effectiveMediaSubfolder(feed, this.settings);
+				const mediaSubfolder = effectiveMediaSubfolder(
+					feed,
+					this.settings,
+				);
 				const vaultFolder =
-					feed.destinationFolder === ""
+					feed.destinationFolder === ''
 						? mediaSubfolder
 						: `${feed.destinationFolder}/${mediaSubfolder}`;
-				const outsideFolder = effectiveMediaOutsideFolder(feed, this.settings);
+				const outsideFolder = effectiveMediaOutsideFolder(
+					feed,
+					this.settings,
+				);
 				downloadMedia = (item) =>
-					mediaDownloader.download(item, { location, vaultFolder, outsideFolder });
+					mediaDownloader.download(item, {
+						location,
+						vaultFolder,
+						outsideFolder,
+					});
 			}
 
 			// Build a cleanup function only when this feed has active rules, so a
@@ -409,7 +489,7 @@ export default class RssImporterPlugin extends Plugin implements RssImporterPlug
 		} catch (err) {
 			console.error(err);
 			new Notice(
-				`Could not start import. ${err instanceof Error ? err.message : "See the console."}`,
+				`Could not start import. ${err instanceof Error ? err.message : 'See the console.'}`,
 			);
 			return;
 		}
@@ -433,7 +513,7 @@ export default class RssImporterPlugin extends Plugin implements RssImporterPlug
 	// through, many -> picker).
 	private launchCleanup(): void {
 		if (this.settings.feeds.length === 0) {
-			new Notice("Add a feed first");
+			new Notice('Add a feed first');
 			this.openAddFeed();
 			return;
 		}
@@ -441,12 +521,16 @@ export default class RssImporterPlugin extends Plugin implements RssImporterPlug
 		if (feeds.length === 1) {
 			const only = feeds[0];
 			if (only !== undefined) {
-				runGuarded("Clean up imported notes", () => this.cleanupFeedNotes(only));
+				runGuarded('Clean up imported notes', () =>
+					this.cleanupFeedNotes(only),
+				);
 			}
 			return;
 		}
 		new FeedPickerModal(this.app, feeds, (feed) => {
-			runGuarded("Clean up imported notes", () => this.cleanupFeedNotes(feed));
+			runGuarded('Clean up imported notes', () =>
+				this.cleanupFeedNotes(feed),
+			);
 		}).open();
 	}
 
@@ -460,15 +544,15 @@ export default class RssImporterPlugin extends Plugin implements RssImporterPlug
 	private async cleanupFeedNotes(feed: FeedConfig): Promise<void> {
 		const config = buildCleanupConfig(feed, this.settings);
 		if (!cleanupHasRules(config)) {
-			new Notice("This feed has no cleanup rules. Add some in settings.");
+			new Notice('This feed has no cleanup rules. Add some in settings.');
 			return;
 		}
 
-		const folder = feed.destinationFolder.trim().replace(/^\/+|\/+$/g, "");
-		const prefix = folder === "" ? "" : `${folder}/`;
+		const folder = trimChars(feed.destinationFolder.trim(), '/');
+		const prefix = folder === '' ? '' : `${folder}/`;
 		const files = this.app.vault
 			.getMarkdownFiles()
-			.filter((file) => prefix === "" || file.path.startsWith(prefix));
+			.filter((file) => prefix === '' || file.path.startsWith(prefix));
 
 		let cleaned = 0;
 		for (const file of files) {
@@ -515,14 +599,18 @@ export default class RssImporterPlugin extends Plugin implements RssImporterPlug
 	private async exportDebugLog(): Promise<void> {
 		const text = this.debugLogger.format();
 		await navigator.clipboard.writeText(text);
-		new Notice("Debug log copied to clipboard");
+		new Notice('Debug log copied to clipboard');
 	}
 
 	private updateRibbonIcon(): void {
 		if (this.settings.showRibbonIcon && this.ribbonEl === null) {
-			this.ribbonEl = this.addRibbonIcon(this.settings.ribbonIcon, "Import from a feed", () => {
-				this.launchImport();
-			});
+			this.ribbonEl = this.addRibbonIcon(
+				this.settings.ribbonIcon,
+				'Import from a feed',
+				() => {
+					this.launchImport();
+				},
+			);
 		} else if (!this.settings.showRibbonIcon && this.ribbonEl !== null) {
 			this.ribbonEl.remove();
 			this.ribbonEl = null;

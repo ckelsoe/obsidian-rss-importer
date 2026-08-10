@@ -6,12 +6,12 @@
 // this test proves the stages compose correctly and that a written note round
 // trips back through the dedup index (so a re-import is a no-op).
 
-import { readFileSync } from "fs";
-import { join } from "path";
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
-import { GenericRssFeedSource } from "../source-generic";
-import { SubstackFeedSource } from "../source-substack";
-import { convertHtmlToMarkdown } from "../html-converter";
+import { GenericRssFeedSource } from '../source-generic';
+import { SubstackFeedSource } from '../source-substack';
+import { convertHtmlToMarkdown } from '../html-converter';
 import {
 	NoteWriter,
 	composeNote,
@@ -19,14 +19,18 @@ import {
 	type FileLike,
 	type FolderLike,
 	type VaultLike,
-} from "../note-writer";
-import { buildFeedItemIndex, type AppLike } from "../vault-index";
-import { buildResolvedFeedFromConfig } from "../import-modal";
-import { FRONTMATTER_KEYS, type HttpFetcher, type HttpResponse } from "../feed-source";
-import type { FeedConfig } from "../settings";
+} from '../note-writer';
+import { buildFeedItemIndex, type AppLike } from '../vault-index';
+import { buildResolvedFeedFromConfig } from '../import-modal';
+import {
+	FRONTMATTER_KEYS,
+	type HttpFetcher,
+	type HttpResponse,
+} from '../feed-source';
+import type { FeedConfig } from '../settings';
 
 function fixture(name: string): string {
-	return readFileSync(join(__dirname, "fixtures", name), "utf8");
+	return readFileSync(join(__dirname, 'fixtures', name), 'utf8');
 }
 
 function must<T>(value: T | undefined, label: string): T {
@@ -45,7 +49,7 @@ function stubFetcher(byUrl: Record<string, string>): HttpFetcher {
 		}
 		return Promise.resolve({
 			status: 200,
-			headers: { "content-type": "application/xml" },
+			headers: { 'content-type': 'application/xml' },
 			json: null,
 			text,
 			arrayBuffer: new ArrayBuffer(0),
@@ -55,18 +59,18 @@ function stubFetcher(byUrl: Record<string, string>): HttpFetcher {
 
 function feedConfig(over: Partial<FeedConfig>): FeedConfig {
 	return {
-		feedId: "example.com",
-		sourceType: "generic",
-		feedUrl: "https://example.com/feed",
-		canonicalHost: "example.com",
-		publicationTitle: "Example",
+		feedId: 'example.com',
+		sourceType: 'generic',
+		feedUrl: 'https://example.com/feed',
+		canonicalHost: 'example.com',
+		publicationTitle: 'Example',
 		author: null,
-		destinationFolder: "Feeds/Example",
+		destinationFolder: 'Feeds/Example',
 		tags: [],
-		tagNamespace: "",
+		tagNamespace: '',
 		importSourceTags: false,
 		enabled: true,
-		addedAt: "2026-06-14T00:00:00.000Z",
+		addedAt: '2026-06-14T00:00:00.000Z',
 		lastImportedAt: null,
 		...over,
 	};
@@ -100,7 +104,7 @@ class FakeVault implements VaultLike {
 		return Promise.resolve(content);
 	}
 	process(file: FileLike, fn: (data: string) => string): Promise<string> {
-		const next = fn(this.files.get(file.path) ?? "");
+		const next = fn(this.files.get(file.path) ?? '');
 		this.files.set(file.path, next);
 		return Promise.resolve(next);
 	}
@@ -109,7 +113,8 @@ class FakeVault implements VaultLike {
 function appFrom(vault: FakeVault): AppLike {
 	return {
 		vault: {
-			getMarkdownFiles: () => Array.from(vault.files.keys()).map((path) => ({ path })),
+			getMarkdownFiles: () =>
+				Array.from(vault.files.keys()).map((path) => ({ path })),
 		},
 		metadataCache: {
 			getFileCache: (file) => {
@@ -118,115 +123,147 @@ function appFrom(vault: FakeVault): AppLike {
 					return null;
 				}
 				const id = extractFeedItemId(content);
-				return { frontmatter: id === null ? {} : { [FRONTMATTER_KEYS.feedItemId]: id } };
+				return {
+					frontmatter:
+						id === null
+							? {}
+							: { [FRONTMATTER_KEYS.feedItemId]: id },
+				};
 			},
 		},
 	};
 }
 
-describe("end-to-end import pipeline", () => {
-	const GENERIC_URL = "https://www.thegodjourney.com/feed/podcast";
+describe('end-to-end import pipeline', () => {
+	const GENERIC_URL = 'https://www.thegodjourney.com/feed/podcast';
 	const genericCfg = feedConfig({
-		sourceType: "generic",
+		sourceType: 'generic',
 		feedUrl: GENERIC_URL,
-		feedId: "www.thegodjourney.com",
-		canonicalHost: "www.thegodjourney.com",
-		publicationTitle: "The God Journey",
-		destinationFolder: "Feeds/The God Journey",
+		feedId: 'www.thegodjourney.com',
+		canonicalHost: 'www.thegodjourney.com',
+		publicationTitle: 'The God Journey',
+		destinationFolder: 'Feeds/The God Journey',
 	});
 
 	function genericSource(): GenericRssFeedSource {
 		return new GenericRssFeedSource({
-			fetcher: stubFetcher({ [GENERIC_URL]: fixture("generic-multi.xml") }),
+			fetcher: stubFetcher({
+				[GENERIC_URL]: fixture('generic-multi.xml'),
+			}),
 		});
 	}
 
-	it("maps a generic feed: podcast item keeps its enclosure, article prefers content:encoded", async () => {
-		const items = await genericSource().listItems(buildResolvedFeedFromConfig(genericCfg));
+	it('maps a generic feed: podcast item keeps its enclosure, article prefers content:encoded', async () => {
+		const items = await genericSource().listItems(
+			buildResolvedFeedFromConfig(genericCfg),
+		);
 		expect(items).toHaveLength(2);
 
 		const podcast = must(
-			items.find((i) => i.kind === "podcast"),
-			"podcast item",
+			items.find((i) => i.kind === 'podcast'),
+			'podcast item',
 		);
-		expect(podcast.mediaUrl).toContain(".mp3");
-		expect(podcast.mediaType).toBe("audio/mpeg");
+		expect(podcast.mediaUrl).toContain('.mp3');
+		expect(podcast.mediaType).toBe('audio/mpeg');
 		expect(podcast.mediaBytes).toBe(43990159);
 
 		const article = must(
-			items.find((i) => i.title.includes("plain article")),
-			"article item",
+			items.find((i) => i.title.includes('plain article')),
+			'article item',
 		);
-		expect(article.kind).toBe("article");
+		expect(article.kind).toBe('article');
 		// content:encoded must win over the shorter <description>.
-		expect(article.contentHtml).toContain("full article body");
-		expect(article.contentHtml).not.toContain("should be overridden");
+		expect(article.contentHtml).toContain('full article body');
+		expect(article.contentHtml).not.toContain('should be overridden');
 	});
 
-	it("writes a real note and finds it again through the dedup index (re-import is a no-op)", async () => {
-		const items = await genericSource().listItems(buildResolvedFeedFromConfig(genericCfg));
+	it('writes a real note and finds it again through the dedup index (re-import is a no-op)', async () => {
+		const items = await genericSource().listItems(
+			buildResolvedFeedFromConfig(genericCfg),
+		);
 		const article = must(
-			items.find((i) => i.title.includes("plain article")),
-			"article item",
+			items.find((i) => i.title.includes('plain article')),
+			'article item',
 		);
 		const full = await genericSource().fetchBody(article);
-		const body = convertHtmlToMarkdown(full.contentHtml ?? "");
+		const body = convertHtmlToMarkdown(full.contentHtml ?? '');
 
 		const vault = new FakeVault();
 		const writer = new NoteWriter({
 			vault,
 			destinationFolder: genericCfg.destinationFolder,
-			noteNameTemplate: "{{date}} {{title}}",
-			onDuplicate: "skip",
+			noteNameTemplate: '{{date}} {{title}}',
+			onDuplicate: 'skip',
 		});
 
-		const outcome = await writer.writeNote(full, body, { feedTags: genericCfg.tags });
-		expect(outcome.status).toBe("created");
+		const outcome = await writer.writeNote(full, body, {
+			feedTags: genericCfg.tags,
+		});
+		expect(outcome.status).toBe('created');
 
-		const noteContent = must(vault.files.get(outcome.path), "written note");
+		const noteContent = must(vault.files.get(outcome.path), 'written note');
 		// Identity round-trips: the id we wrote is the id the reader extracts.
 		expect(extractFeedItemId(noteContent)).toBe(full.id);
 		// url is force-quoted.
 		expect(noteContent).toMatch(/^url: ".+"$/m);
-		expect(noteContent).toContain("full article body");
+		expect(noteContent).toContain('full article body');
 
 		// The dedup index built from the written note contains the item.
-		const index = buildFeedItemIndex(appFrom(vault), genericCfg.destinationFolder);
+		const index = buildFeedItemIndex(
+			appFrom(vault),
+			genericCfg.destinationFolder,
+		);
 		expect(index.has(full.id)).toBe(true);
 
 		// Re-importing the same item is a no-op under the skip policy.
-		const second = await writer.writeNote(full, body, { feedTags: genericCfg.tags });
-		expect(second.status).toBe("skipped");
+		const second = await writer.writeNote(full, body, {
+			feedTags: genericCfg.tags,
+		});
+		expect(second.status).toBe('skipped');
 	});
 
-	it("flags a Substack paid teaser as truncated and writes the warning note shape", async () => {
-		const SUBSTACK_URL = "https://jonathanmclernon.substack.com/feed";
+	it('flags a Substack paid teaser as truncated and writes the warning note shape', async () => {
+		const SUBSTACK_URL = 'https://jonathanmclernon.substack.com/feed';
 		const substackCfg = feedConfig({
-			sourceType: "substack",
+			sourceType: 'substack',
 			feedUrl: SUBSTACK_URL,
-			feedId: "jonathanmclernon.substack.com",
-			canonicalHost: "jonathanmclernon.substack.com",
-			publicationTitle: "Coach Jon McLernon",
-			destinationFolder: "Feeds/Coach Jon McLernon",
+			feedId: 'jonathanmclernon.substack.com',
+			canonicalHost: 'jonathanmclernon.substack.com',
+			publicationTitle: 'Coach Jon McLernon',
+			destinationFolder: 'Feeds/Coach Jon McLernon',
 		});
 		const source = new SubstackFeedSource({
-			fetcher: stubFetcher({ [SUBSTACK_URL]: fixture("substack-multi.xml") }),
+			fetcher: stubFetcher({
+				[SUBSTACK_URL]: fixture('substack-multi.xml'),
+			}),
 		});
 
-		const items = await source.listItems(buildResolvedFeedFromConfig(substackCfg));
-		const free = must(items.find((i) => i.title.includes("free post")), "free post");
-		const paid = must(items.find((i) => i.title.includes("paid post")), "paid post");
+		const items = await source.listItems(
+			buildResolvedFeedFromConfig(substackCfg),
+		);
+		const free = must(
+			items.find((i) => i.title.includes('free post')),
+			'free post',
+		);
+		const paid = must(
+			items.find((i) => i.title.includes('paid post')),
+			'paid post',
+		);
 
 		expect(free.isTruncated).toBe(false);
 		expect(paid.isTruncated).toBe(true);
 
-		const note = composeNote(paid, convertHtmlToMarkdown(paid.contentHtml ?? ""), {});
-		expect(note).toContain("substack-truncated: true");
-		expect(note).toContain("> [!warning]");
+		const note = composeNote(
+			paid,
+			convertHtmlToMarkdown(paid.contentHtml ?? ''),
+			{},
+		);
+		expect(note).toContain('substack-truncated: true');
+		expect(note).toContain('> [!warning]');
 	});
 
-	it("converts a real Substack body deterministically", () => {
-		const html = fixture("substack-content-encoded.html");
+	it('converts a real Substack body deterministically', () => {
+		const html = fixture('substack-content-encoded.html');
 		expect(convertHtmlToMarkdown(html)).toBe(convertHtmlToMarkdown(html));
 	});
 });

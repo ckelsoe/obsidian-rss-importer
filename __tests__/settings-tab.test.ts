@@ -6,9 +6,12 @@
 // the faithful mock (whose PluginSettingTab assigns this.plugin like the real
 // base), so the regression cannot return silently.
 
-import { App } from "obsidian";
-import { RssImporterSettingTab, type RssImporterPluginLike } from "../settings-tab";
-import { DEFAULT_SETTINGS } from "../settings";
+import { App } from 'obsidian';
+import {
+	RssImporterSettingTab,
+	type RssImporterPluginLike,
+} from '../settings-tab';
+import { DEFAULT_SETTINGS } from '../settings';
 
 function makePluginStub(): RssImporterPluginLike {
 	return {
@@ -18,8 +21,8 @@ function makePluginStub(): RssImporterPluginLike {
 	} as unknown as RssImporterPluginLike;
 }
 
-describe("RssImporterSettingTab", () => {
-	it("constructs without throwing and exposes the typed plugin as a writable field", () => {
+describe('RssImporterSettingTab', () => {
+	it('constructs without throwing and exposes the typed plugin as a writable field', () => {
 		const stub = makePluginStub();
 		const tab = new RssImporterSettingTab(new App(), stub);
 		expect(tab).toBeDefined();
@@ -28,13 +31,13 @@ describe("RssImporterSettingTab", () => {
 		expect(tab.plugin).toBe(stub);
 	});
 
-	it("getSettingDefinitions returns the Feeds list and Defaults group", () => {
+	it('getSettingDefinitions returns the Feeds list and Defaults group', () => {
 		const tab = new RssImporterSettingTab(new App(), makePluginStub());
 		const defs = tab.getSettingDefinitions();
 		const headings = defs
 			.map((d) => (d as { heading?: string }).heading)
-			.filter((h): h is string => typeof h === "string");
-		expect(headings).toContain("Feeds");
-		expect(headings).toContain("Defaults");
+			.filter((h): h is string => typeof h === 'string');
+		expect(headings).toContain('Feeds');
+		expect(headings).toContain('Defaults');
 	});
 });

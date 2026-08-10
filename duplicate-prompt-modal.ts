@@ -1,11 +1,11 @@
 // Asks the user whether to overwrite, skip, or cancel when a same-item note
 // already exists and the duplicate policy is "prompt".
 
-import { App, Modal, Setting } from "obsidian";
+import { App, Modal, Setting } from 'obsidian';
 import type {
 	DuplicatePromptContext,
 	DuplicatePromptDecision,
-} from "./note-writer";
+} from './note-writer';
 
 export class DuplicatePromptModal extends Modal {
 	private readonly context: DuplicatePromptContext;
@@ -23,35 +23,35 @@ export class DuplicatePromptModal extends Modal {
 	}
 
 	onOpen(): void {
-		this.setTitle("Note already exists");
+		this.setTitle('Note already exists');
 		const { contentEl } = this;
-		contentEl.createEl("p", {
+		contentEl.createEl('p', {
 			text: `A note for "${this.context.itemTitle}" already exists at ${this.context.targetPath}. Overwrite it?`,
 		});
 		new Setting(contentEl)
 			.addButton((btn) =>
 				btn
-					.setButtonText("Overwrite")
+					.setButtonText('Overwrite')
 					.setDestructive()
 					.onClick(() => {
-						this.settle("overwrite");
+						this.settle('overwrite');
 					}),
 			)
 			.addButton((btn) =>
-				btn.setButtonText("Skip").onClick(() => {
-					this.settle("skip");
+				btn.setButtonText('Skip').onClick(() => {
+					this.settle('skip');
 				}),
 			)
 			.addButton((btn) =>
-				btn.setButtonText("Cancel import").onClick(() => {
-					this.settle("cancel");
+				btn.setButtonText('Cancel import').onClick(() => {
+					this.settle('cancel');
 				}),
 			);
 	}
 
 	onClose(): void {
 		// Dismissing the modal without a choice cancels the import.
-		this.settle("cancel");
+		this.settle('cancel');
 		this.contentEl.empty();
 	}
 

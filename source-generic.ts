@@ -21,14 +21,14 @@ import type {
 	ListItemsOptions,
 	ResolvedFeed,
 	SourceType,
-} from "./feed-source";
-import { FeedResolver } from "./feed-resolver";
+} from './feed-source';
+import { FeedResolver } from './feed-resolver';
 import {
 	applyLimit,
 	buildResolvedFeed,
 	fetchAndParseFeed,
 	mapRawItemToFeedItem,
-} from "./source-common";
+} from './source-common';
 
 /** Constructor dependencies. `resolver` defaults to one wrapping `fetcher`. */
 export interface GenericRssFeedSourceDeps {
@@ -37,7 +37,7 @@ export interface GenericRssFeedSourceDeps {
 }
 
 export class GenericRssFeedSource implements FeedSource {
-	readonly type: SourceType = "generic";
+	readonly type: SourceType = 'generic';
 
 	private readonly fetcher: HttpFetcher;
 	private readonly resolver: FeedResolver;
@@ -68,12 +68,17 @@ export class GenericRssFeedSource implements FeedSource {
 	 * archive-backfill request) returns no items rather than re-fetching the same
 	 * window. The Substack source overrides this with a real archive page.
 	 */
-	async listItems(feed: ResolvedFeed, opts?: ListItemsOptions): Promise<FeedItem[]> {
+	async listItems(
+		feed: ResolvedFeed,
+		opts?: ListItemsOptions,
+	): Promise<FeedItem[]> {
 		if (opts?.offset !== undefined && opts.offset > 0) {
 			return [];
 		}
 		const parsed = await fetchAndParseFeed(this.fetcher, feed.feedUrl);
-		const items = parsed.items.map((raw) => mapRawItemToFeedItem(raw, feed.feedId));
+		const items = parsed.items.map((raw) =>
+			mapRawItemToFeedItem(raw, feed.feedId),
+		);
 		return applyLimit(items, opts?.limit);
 	}
 
@@ -82,7 +87,9 @@ export class GenericRssFeedSource implements FeedSource {
 	 * description), so the item produced by `listItems` is already complete.
 	 * Returns it unchanged rather than refetching arbitrary remote HTML.
 	 */
-	async fetchBody(item: FeedItem): Promise<FeedItem> {
-		return item;
+	fetchBody(item: FeedItem): Promise<FeedItem> {
+		// The generic source has no separate body-fetch step; the list payload is
+		// already the full item. Other sources override this with a real fetch.
+		return Promise.resolve(item);
 	}
 }

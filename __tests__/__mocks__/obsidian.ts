@@ -136,7 +136,7 @@ export abstract class SettingPage {
 	rootEl: ChainableStub = new ChainableStub();
 	titlebarEl: ChainableStub = new ChainableStub();
 	containerEl: ChainableStub = new ChainableStub();
-	title = "";
+	title = '';
 	abstract display(): void;
 	hide(): void {}
 }
@@ -204,7 +204,7 @@ export class TextComponent extends ValueComponent {
 		return this;
 	}
 	getValue(): string {
-		return "";
+		return '';
 	}
 	setPlaceholder(_placeholder: string): this {
 		return this;
@@ -232,7 +232,7 @@ export class DropdownComponent extends ValueComponent {
 		return this;
 	}
 	getValue(): string {
-		return "";
+		return '';
 	}
 }
 
@@ -266,7 +266,7 @@ export class SecretComponent extends ValueComponent {
 		return this;
 	}
 	getValue(): string {
-		return "";
+		return '';
 	}
 }
 
@@ -288,7 +288,7 @@ export abstract class AbstractInputSuggest<T> extends PopoverSuggest<T> {
 	}
 	protected abstract getSuggestions(query: string): T[] | Promise<T[]>;
 	getValue(): string {
-		return "";
+		return '';
 	}
 	setValue(_value: string): void {}
 	onSelect(_cb: (value: T, evt: unknown) => unknown): this {
@@ -308,12 +308,12 @@ export class Notice {
 }
 
 export class TAbstractFile {
-	path = "";
-	name = "";
+	path = '';
+	name = '';
 }
 export class TFile extends TAbstractFile {
-	extension = "md";
-	basename = "";
+	extension = 'md';
+	basename = '';
 }
 export class TFolder extends TAbstractFile {
 	children: TAbstractFile[] = [];
@@ -329,7 +329,10 @@ export const Platform = {
 };
 
 export function normalizePath(path: string): string {
-	return path.replace(/\\/g, "/").replace(/\/+/g, "/").replace(/(^\/|\/$)/g, "");
+	return path
+		.replace(/\\/g, '/')
+		.replace(/\/+/g, '/')
+		.replace(/(^\/|\/$)/g, '');
 }
 
 export function setIcon(_el: unknown, _icon: string): void {}
@@ -339,7 +342,7 @@ export function requestUrl(_req: unknown): Promise<unknown> {
 		status: 200,
 		headers: {},
 		json: null,
-		text: "",
+		text: '',
 		arrayBuffer: new ArrayBuffer(0),
 	});
 }

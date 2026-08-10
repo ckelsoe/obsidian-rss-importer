@@ -23,7 +23,8 @@
 // than importing Obsidian's runtime classes, so it can be unit-tested in the
 // node jest environment with plain-object fakes.
 
-import { FRONTMATTER_KEYS } from "./feed-source";
+import { FRONTMATTER_KEYS } from './feed-source';
+import { trimChars } from './text-trim';
 
 /** Minimal view of a markdown file: only the vault-relative path is needed. */
 export interface FileLike {
@@ -91,7 +92,9 @@ export function buildFeedItemIndex(
 		if (id === undefined) continue;
 		const record: ImportedRecord = {
 			path: file.path,
-			feedSource: pickFrontmatterString(rawFm[FRONTMATTER_KEYS.feedSource]),
+			feedSource: pickFrontmatterString(
+				rawFm[FRONTMATTER_KEYS.feedSource],
+			),
 		};
 		out.set(id, record);
 	}
@@ -101,11 +104,11 @@ export function buildFeedItemIndex(
 // Strip surrounding whitespace and any leading/trailing slashes so the prefix
 // match below is unambiguous regardless of how the folder was configured.
 function normalizeFolder(folder: string): string {
-	return folder.trim().replace(/^\/+|\/+$/g, "");
+	return trimChars(folder.trim(), '/');
 }
 
 function fileIsUnder(file: FileLike, folder: string): boolean {
-	if (folder === "") {
+	if (folder === '') {
 		return true;
 	}
 	const prefix = `${folder}/`;
@@ -116,11 +119,11 @@ function fileIsUnder(file: FileLike, folder: string): boolean {
 // shape. Only accept strings (after trim plus non-empty check); reject
 // everything else so badge state never depends on an ambiguous coercion.
 function pickFrontmatterString(value: unknown): string | undefined {
-	if (typeof value !== "string") return undefined;
+	if (typeof value !== 'string') return undefined;
 	const trimmed = value.trim();
 	return trimmed.length > 0 ? trimmed : undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === "object" && value !== null && !Array.isArray(value);
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
