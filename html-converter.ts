@@ -26,9 +26,10 @@
  * app).
  */
 
-import type TurndownService from "turndown";
-import * as turndownModule from "turndown";
-import { gfm } from "turndown-plugin-gfm";
+import type TurndownService from 'turndown';
+import { trailingDigits, trimTrailingChars } from './text-trim';
+import * as turndownModule from 'turndown';
+import { gfm } from 'turndown-plugin-gfm';
 
 /**
  * The Turndown package is published as CommonJS whose `module.exports` IS the
@@ -40,20 +41,22 @@ import { gfm } from "turndown-plugin-gfm";
  * constructor function directly (raw CommonJS) or an object carrying it on
  * `.default` (interop-wrapped). Resolved once at load with no `as any`.
  */
-type TurndownCtor = new (options?: ConstructorParameters<typeof TurndownService>[0]) => TurndownService;
+type TurndownCtor = new (
+	options?: ConstructorParameters<typeof TurndownService>[0],
+) => TurndownService;
 
 function resolveTurndownCtor(): TurndownCtor {
 	const ns: unknown = turndownModule;
-	if (typeof ns === "function") {
+	if (typeof ns === 'function') {
 		return ns as TurndownCtor;
 	}
-	if (ns !== null && typeof ns === "object" && "default" in ns) {
+	if (ns !== null && typeof ns === 'object' && 'default' in ns) {
 		const inner: unknown = ns.default;
-		if (typeof inner === "function") {
+		if (typeof inner === 'function') {
 			return inner as TurndownCtor;
 		}
 	}
-	throw new Error("turndown module did not export a constructor");
+	throw new Error('turndown module did not export a constructor');
 }
 
 const Turndown: TurndownCtor = resolveTurndownCtor();
@@ -72,8 +75,10 @@ type TurndownPlugin = (service: TurndownService) => void;
  */
 function resolveGfmPlugin(): TurndownPlugin {
 	const candidate: unknown = gfm;
-	if (typeof candidate !== "function") {
-		throw new Error("turndown-plugin-gfm did not export a gfm plugin function");
+	if (typeof candidate !== 'function') {
+		throw new Error(
+			'turndown-plugin-gfm did not export a gfm plugin function',
+		);
 	}
 	return candidate as TurndownPlugin;
 }
@@ -88,26 +93,26 @@ const gfmPlugin: TurndownPlugin = resolveGfmPlugin();
  * rule logic, to retire a new widget family. We never match on body text.
  */
 const WIDGET_STRIP_KEYS: readonly string[] = [
-	"subscribe",
-	"subscription",
-	"share-dialog",
-	"share-wrapper",
-	"sharewrapper",
-	"button-wrapper",
-	"button-primary",
-	"paywall",
-	"poll-embed",
-	"comments-button",
-	"footer-buttons",
+	'subscribe',
+	'subscription',
+	'share-dialog',
+	'share-wrapper',
+	'sharewrapper',
+	'button-wrapper',
+	'button-primary',
+	'paywall',
+	'poll-embed',
+	'comments-button',
+	'footer-buttons',
 	// Substack email-truncation / "read in the app" promo and CTA form blocks.
-	"install-substack-app",
-	"subscription-widget",
-	"preamble",
-	"digest-post-embed",
-	"fake-input",
-	"fake-button",
-	"email-input",
-	"cta-caption",
+	'install-substack-app',
+	'subscription-widget',
+	'preamble',
+	'digest-post-embed',
+	'fake-input',
+	'fake-button',
+	'email-input',
+	'cta-caption',
 ];
 
 /**
@@ -117,9 +122,9 @@ const WIDGET_STRIP_KEYS: readonly string[] = [
  * listed so images are preserved. Matched exactly (not substring).
  */
 const WIDGET_STRIP_COMPONENTS: readonly string[] = [
-	"SubscribeWidgetToDOM",
-	"InstallSubstackAppToDOM",
-	"ButtonCreateButton",
+	'SubscribeWidgetToDOM',
+	'InstallSubstackAppToDOM',
+	'ButtonCreateButton',
 ];
 
 /**
@@ -129,12 +134,12 @@ const WIDGET_STRIP_COMPONENTS: readonly string[] = [
  * otherwise its inner content is kept. Also data-driven.
  */
 const WIDGET_DEGRADE_KEYS: readonly string[] = [
-	"cta",
-	"banner",
-	"promo",
-	"callout",
-	"widget",
-	"embed",
+	'cta',
+	'banner',
+	'promo',
+	'callout',
+	'widget',
+	'embed',
 ];
 
 /** A node carrying a class attribute we can read. */
@@ -156,15 +161,21 @@ interface ConversionContext {
  * array when there is no class attribute, so callers never see undefined.
  */
 function classTokens(node: ClassedElement): string[] {
-	const raw = node.getAttribute("class");
+	const raw = node.getAttribute('class');
 	if (raw === null || raw.length === 0) {
 		return [];
 	}
-	return raw.toLowerCase().split(/\s+/).filter((t) => t.length > 0);
+	return raw
+		.toLowerCase()
+		.split(/\s+/)
+		.filter((t) => t.length > 0);
 }
 
 /** True when any class token contains one of the given key fragments. */
-function classMatchesAny(node: ClassedElement, keys: readonly string[]): boolean {
+function classMatchesAny(
+	node: ClassedElement,
+	keys: readonly string[],
+): boolean {
 	const tokens = classTokens(node);
 	if (tokens.length === 0) {
 		return false;
@@ -174,7 +185,7 @@ function classMatchesAny(node: ClassedElement, keys: readonly string[]): boolean
 
 /** Known subscribe/share/button widget: removed outright. */
 function isStripWidget(node: ClassedElement): boolean {
-	const component = node.getAttribute("data-component-name");
+	const component = node.getAttribute('data-component-name');
 	if (component !== null && WIDGET_STRIP_COMPONENTS.includes(component)) {
 		return true;
 	}
@@ -193,10 +204,12 @@ function isDegradeWidget(node: ClassedElement): boolean {
  * trailing numeric token, falling back to the anchor's trimmed text.
  */
 function footnoteRefLabel(anchor: ClassedElement): string | null {
-	const href = anchor.getAttribute("href");
-	const id = anchor.getAttribute("id");
-	const fromHref = href !== null ? /^#(?:footnote|fn|fnref)[-_]?(.+)$/i.exec(href) : null;
-	const fromId = id !== null ? /^(?:footnote-anchor|fnref)[-_]?(.+)$/i.exec(id) : null;
+	const href = anchor.getAttribute('href');
+	const id = anchor.getAttribute('id');
+	const fromHref =
+		href !== null ? /^#(?:footnote|fn|fnref)[-_]?(.+)$/i.exec(href) : null;
+	const fromId =
+		id !== null ? /^(?:footnote-anchor|fnref)[-_]?(.+)$/i.exec(id) : null;
 	const match = fromHref ?? fromId;
 	if (match === null) {
 		return null;
@@ -205,9 +218,9 @@ function footnoteRefLabel(anchor: ClassedElement): string | null {
 	if (captured === undefined) {
 		return null;
 	}
-	const numeric = /(\d+)\s*$/.exec(captured);
-	if (numeric !== null && numeric[1] !== undefined) {
-		return numeric[1];
+	const numeric = trailingDigits(captured);
+	if (numeric !== null) {
+		return numeric;
 	}
 	return captured.trim().length > 0 ? captured.trim() : null;
 }
@@ -217,7 +230,7 @@ function footnoteRefLabel(anchor: ClassedElement): string | null {
  * an `id` of `footnote-N` / `fn-N` (but not the `-anchor-` ref variant).
  */
 function footnoteDefLabel(node: ClassedElement): string | null {
-	const id = node.getAttribute("id");
+	const id = node.getAttribute('id');
 	if (id === null) {
 		return null;
 	}
@@ -228,16 +241,16 @@ function footnoteDefLabel(node: ClassedElement): string | null {
 	if (/^anchor/i.test(match[1])) {
 		return null;
 	}
-	const numeric = /(\d+)\s*$/.exec(match[1]);
-	if (numeric !== null && numeric[1] !== undefined) {
-		return numeric[1];
+	const numeric = trailingDigits(match[1]);
+	if (numeric !== null) {
+		return numeric;
 	}
 	return match[1].trim().length > 0 ? match[1].trim() : null;
 }
 
 /** Collapses runs of whitespace to single spaces and trims. */
 function collapseWhitespace(text: string): string {
-	return text.replace(/\s+/g, " ").trim();
+	return text.replace(/\s+/g, ' ').trim();
 }
 
 /**
@@ -247,34 +260,34 @@ function collapseWhitespace(text: string): string {
  */
 function buildService(context: ConversionContext): TurndownService {
 	const service = new Turndown({
-		headingStyle: "atx",
-		bulletListMarker: "-",
-		codeBlockStyle: "fenced",
-		emDelimiter: "_",
-		strongDelimiter: "**",
-		hr: "---",
-		linkStyle: "inlined",
+		headingStyle: 'atx',
+		bulletListMarker: '-',
+		codeBlockStyle: 'fenced',
+		emDelimiter: '_',
+		strongDelimiter: '**',
+		hr: '---',
+		linkStyle: 'inlined',
 	});
 
 	service.use(gfmPlugin);
 
 	// Known subscribe / share / button widgets, matched purely by class name,
 	// are removed outright. Body text is never the match criterion.
-	service.addRule("stripFeedWidgets", {
+	service.addRule('stripFeedWidgets', {
 		filter: (node): boolean => isStripWidget(node),
-		replacement: (): string => "",
+		replacement: (): string => '',
 	});
 
 	// Generic promotional wrappers that are not on the strip list degrade: if
 	// the wrapper is fundamentally a single link, emit that link; otherwise keep
 	// its inner content rather than dropping real prose.
-	service.addRule("degradeUnknownWidgets", {
+	service.addRule('degradeUnknownWidgets', {
 		filter: (node): boolean => isDegradeWidget(node),
 		replacement: (content, node): string => {
-			const link = node.querySelector("a[href]");
+			const link = node.querySelector('a[href]');
 			if (link !== null) {
-				const href = link.getAttribute("href");
-				const label = collapseWhitespace(link.textContent ?? "");
+				const href = link.getAttribute('href');
+				const label = collapseWhitespace(link.textContent ?? '');
 				if (href !== null && href.length > 0 && label.length > 0) {
 					return `[${label}](${href})`;
 				}
@@ -286,16 +299,18 @@ function buildService(context: ConversionContext): TurndownService {
 	// figure with a figcaption: emit the inner image markdown, then the caption
 	// as a standalone italic line. Without a caption, fall through to the inner
 	// content (Turndown's default img handling).
-	service.addRule("figureWithCaption", {
-		filter: "figure",
+	service.addRule('figureWithCaption', {
+		filter: 'figure',
 		replacement: (content, node): string => {
-			const captionEl = node.querySelector("figcaption");
-			const img = node.querySelector("img");
-			let imageMd = "";
+			const captionEl = node.querySelector('figcaption');
+			const img = node.querySelector('img');
+			let imageMd = '';
 			if (img !== null) {
-				const src = img.getAttribute("src");
+				const src = img.getAttribute('src');
 				if (src !== null && src.length > 0) {
-					const alt = collapseWhitespace(img.getAttribute("alt") ?? "");
+					const alt = collapseWhitespace(
+						img.getAttribute('alt') ?? '',
+					);
 					imageMd = `![${alt}](${src})`;
 				}
 			}
@@ -304,9 +319,12 @@ function buildService(context: ConversionContext): TurndownService {
 				// linked image Turndown already rendered).
 				imageMd = content.trim();
 			}
-			const caption = captionEl !== null ? collapseWhitespace(captionEl.textContent ?? "") : "";
+			const caption =
+				captionEl !== null
+					? collapseWhitespace(captionEl.textContent ?? '')
+					: '';
 			if (caption.length === 0) {
-				return imageMd.length > 0 ? `\n\n${imageMd}\n\n` : "";
+				return imageMd.length > 0 ? `\n\n${imageMd}\n\n` : '';
 			}
 			return `\n\n${imageMd}\n\n_${caption}_\n\n`;
 		},
@@ -314,17 +332,20 @@ function buildService(context: ConversionContext): TurndownService {
 
 	// pre > code.language-xxx: fenced block carrying the language tag. Falls
 	// back to a plain fence when no language class is present.
-	service.addRule("fencedCodeWithLanguage", {
+	service.addRule('fencedCodeWithLanguage', {
 		filter: (node): boolean => {
-			if (node.nodeName !== "PRE") {
+			if (node.nodeName !== 'PRE') {
 				return false;
 			}
-			return node.querySelector("code") !== null;
+			return node.querySelector('code') !== null;
 		},
 		replacement: (_content, node): string => {
-			const code = node.querySelector("code");
-			const codeText = code !== null ? code.textContent ?? "" : node.textContent ?? "";
-			let language = "";
+			const code = node.querySelector('code');
+			const codeText =
+				code !== null
+					? (code.textContent ?? '')
+					: (node.textContent ?? '');
+			let language = '';
 			if (code !== null) {
 				for (const token of classTokens(code)) {
 					const match = /^language-(.+)$/.exec(token);
@@ -334,16 +355,16 @@ function buildService(context: ConversionContext): TurndownService {
 					}
 				}
 			}
-			const body = codeText.replace(/\n+$/, "");
+			const body = trimTrailingChars(codeText, '\n');
 			return `\n\n\`\`\`${language}\n${body}\n\`\`\`\n\n`;
 		},
 	});
 
 	// Anchor footnote references: collapse to [^N] and record the first-seen
 	// order. The definition body is resolved later from the def containers.
-	service.addRule("footnoteRef", {
+	service.addRule('footnoteRef', {
 		filter: (node): boolean => {
-			if (node.nodeName !== "A") {
+			if (node.nodeName !== 'A') {
 				return false;
 			}
 			return footnoteRefLabel(node) !== null;
@@ -351,7 +372,7 @@ function buildService(context: ConversionContext): TurndownService {
 		replacement: (_content, node): string => {
 			const label = footnoteRefLabel(node);
 			if (label === null) {
-				return "";
+				return '';
 			}
 			if (!context.footnoteOrder.includes(label)) {
 				context.footnoteOrder.push(label);
@@ -362,7 +383,7 @@ function buildService(context: ConversionContext): TurndownService {
 
 	// Footnote definition containers: capture the body keyed by label and emit
 	// nothing inline. Definitions are appended at the document end afterward.
-	service.addRule("footnoteDef", {
+	service.addRule('footnoteDef', {
 		filter: (node): boolean => {
 			if (node.nodeType !== 1) {
 				return false;
@@ -378,7 +399,7 @@ function buildService(context: ConversionContext): TurndownService {
 			if (def.length > 0) {
 				context.footnoteDefs.set(label, def);
 			}
-			return "";
+			return '';
 		},
 	});
 
@@ -400,7 +421,9 @@ function appendFootnotes(markdown: string, context: ConversionContext): string {
 		}
 		seen.add(label);
 	}
-	const leftover = [...context.footnoteDefs.keys()].filter((label) => !seen.has(label)).sort();
+	const leftover = [...context.footnoteDefs.keys()]
+		.filter((label) => !seen.has(label))
+		.sort();
 	for (const label of leftover) {
 		const def = context.footnoteDefs.get(label);
 		if (def !== undefined && def.length > 0) {
@@ -411,7 +434,7 @@ function appendFootnotes(markdown: string, context: ConversionContext): string {
 		return markdown;
 	}
 	const body = markdown.trimEnd();
-	return `${body}\n\n${lines.join("\n")}`;
+	return `${body}\n\n${lines.join('\n')}`;
 }
 
 /**
@@ -420,7 +443,10 @@ function appendFootnotes(markdown: string, context: ConversionContext): string {
  * byte-stable regardless of how rules spaced their fragments.
  */
 function normalizeMarkdown(markdown: string): string {
-	return markdown.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+	return markdown
+		.replace(/\r\n/g, '\n')
+		.replace(/\n{3,}/g, '\n\n')
+		.trim();
 }
 
 /**
@@ -430,7 +456,10 @@ function normalizeMarkdown(markdown: string): string {
  * the context lifecycle for them.
  */
 export function createConverter(): TurndownService {
-	const context: ConversionContext = { footnoteOrder: [], footnoteDefs: new Map() };
+	const context: ConversionContext = {
+		footnoteOrder: [],
+		footnoteDefs: new Map(),
+	};
 	return buildService(context);
 }
 
@@ -442,9 +471,12 @@ export function createConverter(): TurndownService {
  */
 export function convertHtmlToMarkdown(html: string): string {
 	if (html.trim().length === 0) {
-		return "";
+		return '';
 	}
-	const context: ConversionContext = { footnoteOrder: [], footnoteDefs: new Map() };
+	const context: ConversionContext = {
+		footnoteOrder: [],
+		footnoteDefs: new Map(),
+	};
 	const service = buildService(context);
 	let converted: string;
 	try {

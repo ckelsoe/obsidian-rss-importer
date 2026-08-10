@@ -4,35 +4,39 @@
 // only assert they are defined (the `obsidian` import is stubbed by the jest
 // mock). The real coverage is on the pure functions.
 
-import { defaultDestinationFolder, parseTagsInput, AddFeedModal } from "../add-feed-modal";
+import {
+	defaultDestinationFolder,
+	parseTagsInput,
+	AddFeedModal,
+} from '../add-feed-modal';
 import {
 	buildResolvedFeedFromConfig,
 	badgeStateForItem,
 	selectableItemIds,
 	selectAllControlState,
 	ImportModal,
-} from "../import-modal";
-import { RssImporterSettingTab } from "../settings-tab";
-import { FolderSuggest } from "../folder-suggest";
-import { createStackedRow } from "../ui-helpers";
-import type { FeedConfig } from "../settings";
-import type { FeedItem } from "../feed-source";
-import type { ImportedRecord } from "../vault-index";
+} from '../import-modal';
+import { RssImporterSettingTab } from '../settings-tab';
+import { FolderSuggest } from '../folder-suggest';
+import { createStackedRow } from '../ui-helpers';
+import type { FeedConfig } from '../settings';
+import type { FeedItem } from '../feed-source';
+import type { ImportedRecord } from '../vault-index';
 
 function makeFeed(overrides: Partial<FeedConfig> = {}): FeedConfig {
 	return {
-		feedId: "example.com",
-		sourceType: "generic",
-		feedUrl: "https://example.com/feed",
-		canonicalHost: "example.com",
-		publicationTitle: "Example",
-		author: "Jane",
-		destinationFolder: "Feeds/Example",
-		tags: ["news"],
-		tagNamespace: "",
+		feedId: 'example.com',
+		sourceType: 'generic',
+		feedUrl: 'https://example.com/feed',
+		canonicalHost: 'example.com',
+		publicationTitle: 'Example',
+		author: 'Jane',
+		destinationFolder: 'Feeds/Example',
+		tags: ['news'],
+		tagNamespace: '',
 		importSourceTags: true,
 		enabled: true,
-		addedAt: "2026-06-14T00:00:00.000Z",
+		addedAt: '2026-06-14T00:00:00.000Z',
 		lastImportedAt: null,
 		...overrides,
 	};
@@ -40,16 +44,16 @@ function makeFeed(overrides: Partial<FeedConfig> = {}): FeedConfig {
 
 function makeItem(overrides: Partial<FeedItem> = {}): FeedItem {
 	return {
-		sourceId: "example.com",
-		id: "item-1",
-		url: "https://example.com/p/item-1",
-		title: "First post",
-		author: "Jane",
-		publishedAt: "2026-06-01T00:00:00.000Z",
-		kind: "article",
-		contentHtml: "<p>body</p>",
+		sourceId: 'example.com',
+		id: 'item-1',
+		url: 'https://example.com/p/item-1',
+		title: 'First post',
+		author: 'Jane',
+		publishedAt: '2026-06-01T00:00:00.000Z',
+		kind: 'article',
+		contentHtml: '<p>body</p>',
 		isTruncated: false,
-		audience: "free",
+		audience: 'free',
 		tags: [],
 		section: null,
 		mediaUrl: null,
@@ -59,153 +63,179 @@ function makeItem(overrides: Partial<FeedItem> = {}): FeedItem {
 	};
 }
 
-describe("defaultDestinationFolder", () => {
-	test("joins parent and title with a single slash", () => {
-		expect(defaultDestinationFolder("Feeds", "My Blog")).toBe("Feeds/My Blog");
+describe('defaultDestinationFolder', () => {
+	test('joins parent and title with a single slash', () => {
+		expect(defaultDestinationFolder('Feeds', 'My Blog')).toBe(
+			'Feeds/My Blog',
+		);
 	});
 
-	test("trims surrounding slashes on both segments", () => {
-		expect(defaultDestinationFolder("/Feeds/", "/My Blog/")).toBe("Feeds/My Blog");
+	test('trims surrounding slashes on both segments', () => {
+		expect(defaultDestinationFolder('/Feeds/', '/My Blog/')).toBe(
+			'Feeds/My Blog',
+		);
 	});
 
-	test("collapses path separators in the title into spaces", () => {
-		expect(defaultDestinationFolder("Feeds", "a/b\\c")).toBe("Feeds/a b c");
+	test('collapses path separators in the title into spaces', () => {
+		expect(defaultDestinationFolder('Feeds', 'a/b\\c')).toBe('Feeds/a b c');
 	});
 
-	test("empty parent returns just the title", () => {
-		expect(defaultDestinationFolder("", "My Blog")).toBe("My Blog");
+	test('empty parent returns just the title', () => {
+		expect(defaultDestinationFolder('', 'My Blog')).toBe('My Blog');
 	});
 
-	test("empty title returns just the parent", () => {
-		expect(defaultDestinationFolder("Feeds", "   ")).toBe("Feeds");
-	});
-});
-
-describe("parseTagsInput", () => {
-	test("splits, trims, and drops empties", () => {
-		expect(parseTagsInput(" a , b ,, c ")).toEqual(["a", "b", "c"]);
-	});
-
-	test("dedupes while preserving first-seen order", () => {
-		expect(parseTagsInput("a, b, a, c, b")).toEqual(["a", "b", "c"]);
-	});
-
-	test("empty input yields an empty list", () => {
-		expect(parseTagsInput("")).toEqual([]);
+	test('empty title returns just the parent', () => {
+		expect(defaultDestinationFolder('Feeds', '   ')).toBe('Feeds');
 	});
 });
 
-describe("buildResolvedFeedFromConfig", () => {
+describe('parseTagsInput', () => {
+	test('splits, trims, and drops empties', () => {
+		expect(parseTagsInput(' a , b ,, c ')).toEqual(['a', 'b', 'c']);
+	});
+
+	test('dedupes while preserving first-seen order', () => {
+		expect(parseTagsInput('a, b, a, c, b')).toEqual(['a', 'b', 'c']);
+	});
+
+	test('empty input yields an empty list', () => {
+		expect(parseTagsInput('')).toEqual([]);
+	});
+});
+
+describe('buildResolvedFeedFromConfig', () => {
 	test("projects the config's canonical metadata onto a ResolvedFeed", () => {
 		const feed = makeFeed();
 		const resolved = buildResolvedFeedFromConfig(feed);
-		expect(resolved.feedId).toBe("example.com");
-		expect(resolved.feedUrl).toBe("https://example.com/feed");
-		expect(resolved.canonicalHost).toBe("example.com");
-		expect(resolved.sourceType).toBe("generic");
-		expect(resolved.publicationTitle).toBe("Example");
-		expect(resolved.author).toBe("Jane");
+		expect(resolved.feedId).toBe('example.com');
+		expect(resolved.feedUrl).toBe('https://example.com/feed');
+		expect(resolved.canonicalHost).toBe('example.com');
+		expect(resolved.sourceType).toBe('generic');
+		expect(resolved.publicationTitle).toBe('Example');
+		expect(resolved.author).toBe('Jane');
 		// Preview-only fields default to empty/unknown for listing.
 		expect(resolved.sampleTitles).toEqual([]);
-		expect(resolved.audienceHint).toBe("unknown");
+		expect(resolved.audienceHint).toBe('unknown');
 	});
 });
 
-describe("badgeStateForItem", () => {
+describe('badgeStateForItem', () => {
 	const dismissedSet = new Set<string>();
 	const dismissStore = {
-		isDismissed: (_feedId: string, itemId: string): boolean => dismissedSet.has(itemId),
+		isDismissed: (_feedId: string, itemId: string): boolean =>
+			dismissedSet.has(itemId),
 	};
 
 	beforeEach(() => {
 		dismissedSet.clear();
 	});
 
-	test("returns imported when the item is in the vault index", () => {
-		const item = makeItem({ id: "in-vault" });
-		const index = new Map<string, ImportedRecord>([["in-vault", { path: "Feeds/Example/x.md" }]]);
-		expect(badgeStateForItem(item, "example.com", index, dismissStore)).toBe("imported");
+	test('returns imported when the item is in the vault index', () => {
+		const item = makeItem({ id: 'in-vault' });
+		const index = new Map<string, ImportedRecord>([
+			['in-vault', { path: 'Feeds/Example/x.md' }],
+		]);
+		expect(
+			badgeStateForItem(item, 'example.com', index, dismissStore),
+		).toBe('imported');
 	});
 
-	test("imported wins over dismissed", () => {
-		const item = makeItem({ id: "both" });
-		dismissedSet.add("both");
-		const index = new Map<string, ImportedRecord>([["both", { path: "Feeds/Example/x.md" }]]);
-		expect(badgeStateForItem(item, "example.com", index, dismissStore)).toBe("imported");
+	test('imported wins over dismissed', () => {
+		const item = makeItem({ id: 'both' });
+		dismissedSet.add('both');
+		const index = new Map<string, ImportedRecord>([
+			['both', { path: 'Feeds/Example/x.md' }],
+		]);
+		expect(
+			badgeStateForItem(item, 'example.com', index, dismissStore),
+		).toBe('imported');
 	});
 
-	test("returns dismissed when dismissed and not imported", () => {
-		const item = makeItem({ id: "skip-me" });
-		dismissedSet.add("skip-me");
+	test('returns dismissed when dismissed and not imported', () => {
+		const item = makeItem({ id: 'skip-me' });
+		dismissedSet.add('skip-me');
 		const index = new Map<string, ImportedRecord>();
-		expect(badgeStateForItem(item, "example.com", index, dismissStore)).toBe("dismissed");
+		expect(
+			badgeStateForItem(item, 'example.com', index, dismissStore),
+		).toBe('dismissed');
 	});
 
-	test("returns available when neither imported nor dismissed", () => {
-		const item = makeItem({ id: "fresh" });
+	test('returns available when neither imported nor dismissed', () => {
+		const item = makeItem({ id: 'fresh' });
 		const index = new Map<string, ImportedRecord>();
-		expect(badgeStateForItem(item, "example.com", index, dismissStore)).toBe("available");
+		expect(
+			badgeStateForItem(item, 'example.com', index, dismissStore),
+		).toBe('available');
 	});
 });
 
-describe("selectableItemIds", () => {
+describe('selectableItemIds', () => {
 	const dismissStore = {
-		isDismissed: (_feedId: string, itemId: string): boolean => itemId === "dismissed",
+		isDismissed: (_feedId: string, itemId: string): boolean =>
+			itemId === 'dismissed',
 	};
 
-	test("returns only available items, skipping imported and dismissed", () => {
+	test('returns only available items, skipping imported and dismissed', () => {
 		const items = [
-			makeItem({ id: "available-1" }),
-			makeItem({ id: "imported" }),
-			makeItem({ id: "dismissed" }),
-			makeItem({ id: "available-2" }),
+			makeItem({ id: 'available-1' }),
+			makeItem({ id: 'imported' }),
+			makeItem({ id: 'dismissed' }),
+			makeItem({ id: 'available-2' }),
 		];
-		const index = new Map<string, ImportedRecord>([["imported", { path: "Feeds/Example/x.md" }]]);
-		expect(selectableItemIds(items, "example.com", index, dismissStore)).toEqual([
-			"available-1",
-			"available-2",
+		const index = new Map<string, ImportedRecord>([
+			['imported', { path: 'Feeds/Example/x.md' }],
 		]);
+		expect(
+			selectableItemIds(items, 'example.com', index, dismissStore),
+		).toEqual(['available-1', 'available-2']);
 	});
 
-	test("returns an empty list when nothing is available", () => {
-		const items = [makeItem({ id: "imported" }), makeItem({ id: "dismissed" })];
-		const index = new Map<string, ImportedRecord>([["imported", { path: "x.md" }]]);
-		expect(selectableItemIds(items, "example.com", index, dismissStore)).toEqual([]);
+	test('returns an empty list when nothing is available', () => {
+		const items = [
+			makeItem({ id: 'imported' }),
+			makeItem({ id: 'dismissed' }),
+		];
+		const index = new Map<string, ImportedRecord>([
+			['imported', { path: 'x.md' }],
+		]);
+		expect(
+			selectableItemIds(items, 'example.com', index, dismissStore),
+		).toEqual([]);
 	});
 });
 
-describe("selectAllControlState", () => {
-	test("disabled with the select label when nothing is selectable", () => {
+describe('selectAllControlState', () => {
+	test('disabled with the select label when nothing is selectable', () => {
 		expect(selectAllControlState(0, 0)).toEqual({
-			label: "Select all",
+			label: 'Select all',
 			disabled: true,
-			action: "select",
+			action: 'select',
 		});
 	});
 
-	test("offers select when some selectable items are unselected", () => {
+	test('offers select when some selectable items are unselected', () => {
 		expect(selectAllControlState(5, 2)).toEqual({
-			label: "Select all",
+			label: 'Select all',
 			disabled: false,
-			action: "select",
+			action: 'select',
 		});
 	});
 
-	test("flips to clear once every selectable item is selected", () => {
+	test('flips to clear once every selectable item is selected', () => {
 		expect(selectAllControlState(5, 5)).toEqual({
-			label: "Deselect all",
+			label: 'Deselect all',
 			disabled: false,
-			action: "clear",
+			action: 'clear',
 		});
 	});
 });
 
-describe("UI shell classes are defined", () => {
-	test("modal and tab classes load under the obsidian stub", () => {
-		expect(typeof AddFeedModal).toBe("function");
-		expect(typeof ImportModal).toBe("function");
-		expect(typeof RssImporterSettingTab).toBe("function");
-		expect(typeof FolderSuggest).toBe("function");
-		expect(typeof createStackedRow).toBe("function");
+describe('UI shell classes are defined', () => {
+	test('modal and tab classes load under the obsidian stub', () => {
+		expect(typeof AddFeedModal).toBe('function');
+		expect(typeof ImportModal).toBe('function');
+		expect(typeof RssImporterSettingTab).toBe('function');
+		expect(typeof FolderSuggest).toBe('function');
+		expect(typeof createStackedRow).toBe('function');
 	});
 });

@@ -21,8 +21,9 @@
 // plain object, and main.ts passes this.app.vault directly (Obsidian's Vault
 // class satisfies VaultLike structurally).
 
-import type { FeedItem } from "./feed-source";
-import { FRONTMATTER_KEYS } from "./feed-source";
+import type { FeedItem } from './feed-source';
+import { trimChars, trimTrailingChars } from './text-trim';
+import { FRONTMATTER_KEYS } from './feed-source';
 
 // -----------------------------------------------------------------------------
 // Errors
@@ -36,7 +37,7 @@ import { FRONTMATTER_KEYS } from "./feed-source";
 export class NoteWriterError extends Error {
 	constructor(message: string) {
 		super(message);
-		this.name = "NoteWriterError";
+		this.name = 'NoteWriterError';
 	}
 }
 
@@ -46,9 +47,9 @@ export class NoteWriterError extends Error {
  * batch loop without treating it as a write failure.
  */
 export class NoteWriterCancelledError extends Error {
-	constructor(message = "Import cancelled by user from duplicate prompt") {
+	constructor(message = 'Import cancelled by user from duplicate prompt') {
 		super(message);
-		this.name = "NoteWriterCancelledError";
+		this.name = 'NoteWriterCancelledError';
 	}
 }
 
@@ -73,7 +74,7 @@ export interface VaultLike {
 	process(file: FileLike, fn: (data: string) => string): Promise<string>;
 }
 
-export type DuplicatePolicy = "skip" | "overwrite" | "prompt";
+export type DuplicatePolicy = 'skip' | 'overwrite' | 'prompt';
 
 /**
  * Context passed to the prompt callback when a same-item duplicate is
@@ -91,13 +92,13 @@ export interface DuplicatePromptContext {
  * lives at the caller layer; from the writer's point of view each call either
  * overwrites this file, skips this file, or aborts the whole batch.
  */
-export type DuplicatePromptDecision = "overwrite" | "skip" | "cancel";
+export type DuplicatePromptDecision = 'overwrite' | 'skip' | 'cancel';
 
 export type DuplicatePromptCallback = (
 	context: DuplicatePromptContext,
 ) => Promise<DuplicatePromptDecision>;
 
-export type WriteStatus = "created" | "overwritten" | "skipped";
+type WriteStatus = 'created' | 'overwritten' | 'skipped';
 
 export interface WriteOutcome {
 	readonly status: WriteStatus;
@@ -125,7 +126,7 @@ export interface NoteWriterOptions {
  * that stays out of the global Obsidian tag pane/search/graph; "tags" writes
  * Obsidian tags that DO appear there.
  */
-export type TagDestination = "feed-tags" | "tags";
+export type TagDestination = 'feed-tags' | 'tags';
 
 export interface ComposeOptions {
 	/** Tags carried by the configured feed; merged with the item's own tags. */
@@ -148,9 +149,28 @@ export interface ComposeOptions {
 // Reserved Windows device names. Even with an extension these can confuse
 // legacy code, so we prefix them with an underscore to neutralize.
 const RESERVED_DEVICE_NAMES = new Set([
-	"CON", "PRN", "AUX", "NUL",
-	"COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
-	"LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+	'CON',
+	'PRN',
+	'AUX',
+	'NUL',
+	'COM1',
+	'COM2',
+	'COM3',
+	'COM4',
+	'COM5',
+	'COM6',
+	'COM7',
+	'COM8',
+	'COM9',
+	'LPT1',
+	'LPT2',
+	'LPT3',
+	'LPT4',
+	'LPT5',
+	'LPT6',
+	'LPT7',
+	'LPT8',
+	'LPT9',
 ]);
 
 /**
@@ -166,7 +186,7 @@ export function sanitizeFilename(title: string): string {
 	// Collapse runs of whitespace (including newlines and tabs) into single
 	// spaces FIRST. A multi-line title should flatten to a space-separated
 	// single line, not gain dashes at every line break.
-	out = out.replace(/\s+/g, " ");
+	out = out.replace(/\s+/g, ' ');
 
 	// Now replace the Windows-forbidden chars, square brackets (wikilink
 	// collision), and any remaining non-whitespace control characters with
@@ -174,19 +194,18 @@ export function sanitizeFilename(title: string): string {
 	// the step above, so what is left is things like NUL (\x00) and the other
 	// non-whitespace control codes.
 	// eslint-disable-next-line no-control-regex -- intentional: this class strips NUL and other non-whitespace control codes from the filename
-	out = out.replace(/[<>:"/\\|?*\x00-\x08\x0b\x0c\x0e-\x1f[\]]/g, "-");
+	out = out.replace(/[<>:"/\\|?*\x00-\x08\x0b\x0c\x0e-\x1f[\]]/g, '-');
 
 	// Strip leading and trailing dots and spaces. Windows silently drops them
 	// from filenames, which causes "File.md" and "File .md" to collide.
-	out = out.replace(/^[. ]+/, "");
-	out = out.replace(/[. ]+$/, "");
+	out = trimChars(out, '. ');
 
 	// Clamp length: 200 chars leaves room for ".md" plus any disambiguation
 	// suffix the vault layer might add. Filesystems typically cap at 255.
 	if (out.length > 200) {
 		out = out.slice(0, 200).trim();
 		// Re-strip trailing dots/spaces after the slice.
-		out = out.replace(/[. ]+$/, "");
+		out = trimTrailingChars(out, '. ');
 	}
 
 	if (RESERVED_DEVICE_NAMES.has(out.toUpperCase())) {
@@ -196,7 +215,7 @@ export function sanitizeFilename(title: string): string {
 	// Empty-after-sanitization fallback. This happens for titles that are
 	// entirely punctuation or whitespace.
 	if (out.length === 0) {
-		out = "Untitled";
+		out = 'Untitled';
 	}
 
 	return out;
@@ -209,13 +228,13 @@ export function sanitizeFilename(title: string): string {
  */
 function isoToYmd(publishedAt: string | null): string {
 	if (publishedAt === null) {
-		return "";
+		return '';
 	}
 	const date = new Date(publishedAt);
 	if (Number.isNaN(date.getTime())) {
-		return "";
+		return '';
 	}
-	const pad = (n: number): string => String(n).padStart(2, "0");
+	const pad = (n: number): string => String(n).padStart(2, '0');
 	return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
 }
 
@@ -225,10 +244,7 @@ function isoToYmd(publishedAt: string | null): string {
  * Returns empty string when the title has no alphanumeric content.
  */
 function slugify(title: string): string {
-	return title
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, "-")
-		.replace(/^-+|-+$/g, "");
+	return trimChars(title.toLowerCase().replace(/[^a-z0-9]+/g, '-'), '-');
 }
 
 /**
@@ -251,7 +267,7 @@ export function expandNoteName(template: string, item: FeedItem): string {
 	// token value can never introduce a path separator or a forbidden char.
 	const dateValue = isoToYmd(item.publishedAt);
 	const replacements: Record<string, string> = {
-		date: dateValue === "" ? "" : sanitizeFilename(dateValue),
+		date: dateValue === '' ? '' : sanitizeFilename(dateValue),
 		title: sanitizeFilename(item.title),
 		slug: sanitizeFilename(slugify(item.title)),
 	};
@@ -260,7 +276,7 @@ export function expandNoteName(template: string, item: FeedItem): string {
 		/\{\{(date|title|slug)\}\}/g,
 		(_match, token: string) => {
 			const value = replacements[token];
-			return value === undefined ? "" : value;
+			return value === undefined ? '' : value;
 		},
 	);
 
@@ -287,14 +303,28 @@ export function expandNoteName(template: string, item: FeedItem): string {
 // Reserved YAML tokens that parse as something other than a string if left
 // unquoted. Covers the common casings a real title/author/id could match.
 const YAML_RESERVED_TOKENS = new Set([
-	"true", "True", "TRUE",
-	"false", "False", "FALSE",
-	"yes", "Yes", "YES",
-	"no", "No", "NO",
-	"on", "On", "ON",
-	"off", "Off", "OFF",
-	"null", "Null", "NULL",
-	"~",
+	'true',
+	'True',
+	'TRUE',
+	'false',
+	'False',
+	'FALSE',
+	'yes',
+	'Yes',
+	'YES',
+	'no',
+	'No',
+	'NO',
+	'on',
+	'On',
+	'ON',
+	'off',
+	'Off',
+	'OFF',
+	'null',
+	'Null',
+	'NULL',
+	'~',
 ]);
 
 /**
@@ -321,11 +351,11 @@ function yamlScalar(value: string): string {
 		return value;
 	}
 	const escaped = value
-		.replace(/\\/g, "\\\\")
+		.replace(/\\/g, '\\\\')
 		.replace(/"/g, '\\"')
-		.replace(/\n/g, "\\n")
-		.replace(/\r/g, "\\r")
-		.replace(/\t/g, "\\t");
+		.replace(/\n/g, '\\n')
+		.replace(/\r/g, '\\r')
+		.replace(/\t/g, '\\t');
 	return `"${escaped}"`;
 }
 
@@ -337,11 +367,11 @@ function yamlScalar(value: string): string {
  */
 function yamlQuoted(value: string): string {
 	const escaped = value
-		.replace(/\\/g, "\\\\")
+		.replace(/\\/g, '\\\\')
 		.replace(/"/g, '\\"')
-		.replace(/\n/g, "\\n")
-		.replace(/\r/g, "\\r")
-		.replace(/\t/g, "\\t");
+		.replace(/\n/g, '\\n')
+		.replace(/\r/g, '\\r')
+		.replace(/\t/g, '\\t');
 	return `"${escaped}"`;
 }
 
@@ -351,12 +381,10 @@ function yamlQuoted(value: string): string {
  * Returns empty string for a tag with no usable content; callers drop those.
  */
 function normalizeTag(tag: string): string {
-	return tag
-		.trim()
-		.replace(/^#+/, "")
-		.toLowerCase()
-		.replace(/\s+/g, "-")
-		.replace(/^-+|-+$/g, "");
+	return trimChars(
+		tag.trim().replace(/^#+/, '').toLowerCase().replace(/\s+/g, '-'),
+		'-',
+	);
 }
 
 /**
@@ -390,7 +418,7 @@ function mergeTags(
 
 /** Render a YAML flow array of plain (already-normalized) tags. */
 function yamlTagArray(tags: readonly string[]): string {
-	return `[${tags.join(", ")}]`;
+	return `[${tags.join(', ')}]`;
 }
 
 /**
@@ -399,9 +427,9 @@ function yamlTagArray(tags: readonly string[]): string {
  * Obsidian callout block.
  */
 const TRUNCATED_CALLOUT = [
-	"> [!warning] Truncated content",
-	"> This is a paywalled teaser, not the complete post. Open the original to read the full text.",
-].join("\n");
+	'> [!warning] Truncated content',
+	'> This is a paywalled teaser, not the complete post. Open the original to read the full text.',
+].join('\n');
 
 /**
  * Compose a complete note (YAML frontmatter plus body) for a feed item.
@@ -430,7 +458,7 @@ export function composeNote(
 	bodyMarkdown: string,
 	opts: ComposeOptions,
 ): string {
-	const lines: string[] = ["---"];
+	const lines: string[] = ['---'];
 	lines.push(`${FRONTMATTER_KEYS.feedSource}: ${yamlScalar(item.sourceId)}`);
 	lines.push(`${FRONTMATTER_KEYS.feedItemId}: ${yamlScalar(item.id)}`);
 	// Force-quote the url: an unquoted https://... value parses wrong on some
@@ -448,27 +476,31 @@ export function composeNote(
 	if (tags.length > 0) {
 		// Default to a plain note property so feed tags do not flood the Obsidian
 		// tag pane; "tags" opts into real Obsidian tags.
-		const tagKey = opts.tagDestination === "tags" ? FRONTMATTER_KEYS.tags : "feed-tags";
+		const tagKey =
+			opts.tagDestination === 'tags'
+				? FRONTMATTER_KEYS.tags
+				: 'feed-tags';
 		lines.push(`${tagKey}: ${yamlTagArray(tags)}`);
 	}
 	// Media items (podcast episodes, attached audio/video) record their media URL
 	// in frontmatter. Force-quoted because it is a URL. Placed after tags and
 	// before the truncated marker.
 	const hasMedia = item.mediaUrl !== null && item.mediaUrl.length > 0;
-	const hasMediaFile = opts.mediaFile !== undefined && opts.mediaFile.length > 0;
+	const hasMediaFile =
+		opts.mediaFile !== undefined && opts.mediaFile.length > 0;
 	if (hasMedia && item.mediaUrl !== null) {
 		lines.push(`media-url: ${yamlQuoted(item.mediaUrl)}`);
 	}
 	// When the enclosure was downloaded, record the local file path right after
 	// the remote url. Force-quoted because a path can contain spaces or colons.
-	if (hasMediaFile && opts.mediaFile !== undefined) {
+	if (hasMediaFile) {
 		lines.push(`media-file: ${yamlQuoted(opts.mediaFile)}`);
 	}
 	if (item.isTruncated) {
 		// Machine-readable marker alongside the visible callout below.
-		lines.push("substack-truncated: true");
+		lines.push('substack-truncated: true');
 	}
-	lines.push("---");
+	lines.push('---');
 
 	let body = item.isTruncated
 		? `${TRUNCATED_CALLOUT}\n\n${bodyMarkdown}`
@@ -477,15 +509,15 @@ export function composeNote(
 	// Link the media at the end of the body so a podcast note plays its episode
 	// and any other media item is reachable from the note. Prefer the downloaded
 	// local file when present; otherwise fall back to the remote url.
-	if (hasMediaFile && opts.mediaFile !== undefined) {
-		const label = item.kind === "podcast" ? "Episode audio" : "Media";
+	if (hasMediaFile) {
+		const label = item.kind === 'podcast' ? 'Episode audio' : 'Media';
 		body = `${body}\n\n[${label}](${opts.mediaFile})`;
 	} else if (hasMedia && item.mediaUrl !== null) {
-		const label = item.kind === "podcast" ? "Episode audio" : "Media";
+		const label = item.kind === 'podcast' ? 'Episode audio' : 'Media';
 		body = `${body}\n\n[${label}](${item.mediaUrl})`;
 	}
 
-	return `${lines.join("\n")}\n\n${body}`;
+	return `${lines.join('\n')}\n\n${body}`;
 }
 
 /**
@@ -498,7 +530,7 @@ export function composeNote(
  * the frontmatter is malformed enough that the id cannot be parsed.
  */
 export function extractFeedItemId(content: string): string | null {
-	const block = content.match(/^---\s*\r?\n([\s\S]*?)\r?\n---/);
+	const block = content.match(/^---[ \t]*\r?\n([\s\S]*?)\r?\n---/);
 	if (!block) {
 		return null;
 	}
@@ -510,9 +542,9 @@ export function extractFeedItemId(content: string): string | null {
 	// characters; today it is "feed-item-id" but keep this robust.
 	const keyPattern = FRONTMATTER_KEYS.feedItemId.replace(
 		/[.*+?^${}()|[\]\\]/g,
-		"\\$&",
+		'\\$&',
 	);
-	const idLine = body.match(new RegExp(`^${keyPattern}:\\s*(.*?)\\s*$`, "m"));
+	const idLine = body.match(new RegExp(`^${keyPattern}:\\s*(.*?)\\s*$`, 'm'));
 	if (!idLine) {
 		return null;
 	}
@@ -537,16 +569,16 @@ export function extractFeedItemId(content: string): string | null {
 		// matches `\\` as a unit and maps the rest by their following character.
 		value = value.replace(/\\(.)/g, (_match, next: string) => {
 			switch (next) {
-				case "\\":
-					return "\\";
+				case '\\':
+					return '\\';
 				case '"':
 					return '"';
-				case "n":
-					return "\n";
-				case "r":
-					return "\r";
-				case "t":
-					return "\t";
+				case 'n':
+					return '\n';
+				case 'r':
+					return '\r';
+				case 't':
+					return '\t';
 				default:
 					// Unknown escape: drop the backslash, keep the character.
 					return next;
@@ -562,7 +594,7 @@ export function extractFeedItemId(content: string): string | null {
  * being clobbered by a later truncated teaser of the same item.
  */
 function existingNoteIsTruncated(content: string): boolean {
-	const block = content.match(/^---\s*\r?\n([\s\S]*?)\r?\n---/);
+	const block = content.match(/^---[ \t]*\r?\n([\s\S]*?)\r?\n---/);
 	if (!block) {
 		return false;
 	}
@@ -570,7 +602,7 @@ function existingNoteIsTruncated(content: string): boolean {
 	if (body === undefined) {
 		return false;
 	}
-	const line = body.match(/^substack-truncated:\s*(.*?)\s*$/m);
+	const line = body.match(/^substack-truncated:(.*)$/m);
 	if (!line) {
 		return false;
 	}
@@ -578,7 +610,7 @@ function existingNoteIsTruncated(content: string): boolean {
 	if (raw === undefined) {
 		return false;
 	}
-	return raw.trim().toLowerCase() === "true";
+	return raw.trim().toLowerCase() === 'true';
 }
 
 // -----------------------------------------------------------------------------
@@ -598,17 +630,17 @@ export class NoteWriter {
 
 	constructor(opts: NoteWriterOptions) {
 		if (
-			opts.onDuplicate !== "skip" &&
-			opts.onDuplicate !== "overwrite" &&
-			opts.onDuplicate !== "prompt"
+			opts.onDuplicate !== 'skip' &&
+			opts.onDuplicate !== 'overwrite' &&
+			opts.onDuplicate !== 'prompt'
 		) {
 			throw new NoteWriterError(
 				`Invalid onDuplicate policy "${String(opts.onDuplicate)}" — expected 'skip', 'overwrite', or 'prompt'`,
 			);
 		}
 		if (
-			opts.onDuplicate === "prompt" &&
-			typeof opts.promptOnDuplicate !== "function"
+			opts.onDuplicate === 'prompt' &&
+			typeof opts.promptOnDuplicate !== 'function'
 		) {
 			throw new NoteWriterError(
 				"Invalid onDuplicate policy 'prompt' — a promptOnDuplicate callback is required",
@@ -631,13 +663,14 @@ export class NoteWriter {
 
 		const filename = `${expandNoteName(this.noteNameTemplate, item)}.md`;
 		const targetPath =
-			this.destinationFolder === ""
+			this.destinationFolder === ''
 				? filename
 				: `${this.destinationFolder}/${filename}`;
 
 		const markdown = composeNote(item, bodyMarkdown, {
 			...(composeOptions ?? {}),
-			tagDestination: composeOptions?.tagDestination ?? this.tagDestination,
+			tagDestination:
+				composeOptions?.tagDestination ?? this.tagDestination,
 		});
 
 		const existing = this.vault.getFileByPath(targetPath);
@@ -649,7 +682,7 @@ export class NoteWriter {
 					`Failed to create ${targetPath} for item ${item.id}: ${describeCause(cause)}`,
 				);
 			}
-			return { status: "created", path: targetPath };
+			return { status: 'created', path: targetPath };
 		}
 
 		// A file already exists at this path. Before honoring the duplicate
@@ -677,20 +710,20 @@ export class NoteWriter {
 		// as skipped so a re-import after a paywall change does not regress a
 		// good note back to a teaser.
 		if (item.isTruncated && !existingNoteIsTruncated(existingContent)) {
-			return { status: "skipped", path: targetPath };
+			return { status: 'skipped', path: targetPath };
 		}
 
-		if (this.onDuplicate === "skip") {
-			return { status: "skipped", path: targetPath };
+		if (this.onDuplicate === 'skip') {
+			return { status: 'skipped', path: targetPath };
 		}
 
 		// Resolve prompt-mode into a concrete action. 'skip' short-circuits,
 		// 'cancel' throws, anything else falls through to the overwrite path
 		// shared with onDuplicate === 'overwrite'.
-		if (this.onDuplicate === "prompt") {
+		if (this.onDuplicate === 'prompt') {
 			if (!this.promptOnDuplicate) {
 				throw new NoteWriterError(
-					"promptOnDuplicate callback missing at write time — this is a plugin bug",
+					'promptOnDuplicate callback missing at write time — this is a plugin bug',
 				);
 			}
 			const decision = await this.promptOnDuplicate({
@@ -698,16 +731,16 @@ export class NoteWriter {
 				itemTitle: item.title,
 				targetPath,
 			});
-			if (decision === "cancel") {
+			if (decision === 'cancel') {
 				throw new NoteWriterCancelledError();
 			}
-			if (decision !== "overwrite" && decision !== "skip") {
+			if (decision !== 'overwrite' && decision !== 'skip') {
 				throw new NoteWriterError(
 					`promptOnDuplicate returned invalid decision "${String(decision)}"`,
 				);
 			}
-			if (decision === "skip") {
-				return { status: "skipped", path: targetPath };
+			if (decision === 'skip') {
+				return { status: 'skipped', path: targetPath };
 			}
 		}
 
@@ -722,7 +755,7 @@ export class NoteWriter {
 				`Failed to overwrite ${targetPath} for item ${item.id}: ${describeCause(cause)}`,
 			);
 		}
-		return { status: "overwritten", path: targetPath };
+		return { status: 'overwritten', path: targetPath };
 	}
 
 	/**
@@ -731,12 +764,12 @@ export class NoteWriter {
 	 * checked first.
 	 */
 	private async ensureFolder(folderPath: string): Promise<void> {
-		if (folderPath === "") {
+		if (folderPath === '') {
 			return;
 		}
-		const segments = folderPath.split("/");
+		const segments = folderPath.split('/');
 		for (let i = 1; i <= segments.length; i++) {
-			const partial = segments.slice(0, i).join("/");
+			const partial = segments.slice(0, i).join('/');
 			const existing = this.vault.getFolderByPath(partial);
 			if (existing === null) {
 				try {
@@ -762,15 +795,12 @@ function describeCause(cause: unknown): string {
  * a lie to the user about where their files went.
  */
 function normalizeFolderPath(folder: string): string {
-	const cleaned = folder
-		.trim()
-		.replace(/^\/+|\/+$/g, "")
-		.replace(/\/{2,}/g, "/");
-	const segments = cleaned.split("/").filter((s) => s !== "" && s !== ".");
-	if (segments.some((s) => s === "..")) {
+	const cleaned = trimChars(folder.trim(), '/').replace(/\/{2,}/g, '/');
+	const segments = cleaned.split('/').filter((s) => s !== '' && s !== '.');
+	if (segments.some((s) => s === '..')) {
 		throw new NoteWriterError(
 			`Destination folder "${folder}" contains ".." which would escape the vault — use a vault-relative path`,
 		);
 	}
-	return segments.join("/");
+	return segments.join('/');
 }

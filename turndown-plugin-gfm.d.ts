@@ -7,8 +7,8 @@
 // fails to suppress TS7016. Keeping this file script-scoped makes the block a
 // real ambient module declaration. The TurndownService type is referenced via
 // an inline `import('turndown')` so this file stays script-scoped.
-declare module "turndown-plugin-gfm" {
-	type GfmPlugin = (service: import("turndown")) => void;
+declare module 'turndown-plugin-gfm' {
+	type GfmPlugin = (service: import('turndown')) => void;
 	export const gfm: GfmPlugin;
 	export const tables: GfmPlugin;
 	export const strikethrough: GfmPlugin;

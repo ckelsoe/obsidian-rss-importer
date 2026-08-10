@@ -20,7 +20,8 @@
 // No `obsidian` import and no DOM use: the vault surface is a structural
 // interface so tests inject a plain object and main.ts passes app.vault.
 
-import type { FeedItem, HttpFetcher } from "./feed-source";
+import type { HttpFetcher } from './feed-source';
+import { trimChars, trimTrailingChars } from './text-trim';
 
 /** A vault file/folder handle the downloader only needs a path from. */
 export interface BinaryFileLike {
@@ -48,33 +49,44 @@ export interface ImageDownloaderOptions {
 // closing paren or whitespace so a trailing `(width=...)` title or a following
 // paren does not get swallowed. Alt text is captured but only used to rebuild
 // the rewritten reference unchanged.
-const IMAGE_REF = /!\[([^\]]*)\]\(\s*([^)\s]+)(?:\s+[^)]*)?\)/g;
+const IMAGE_REF = /!\[([^\]]*)\]\([ \t]*([^)\s]+)(?:[ \t][^)]*)?\)/g;
 
 // Map common image content-types to a file extension when the URL has none.
 const CONTENT_TYPE_EXT: Record<string, string> = {
-	"image/jpeg": "jpg",
-	"image/jpg": "jpg",
-	"image/png": "png",
-	"image/gif": "gif",
-	"image/webp": "webp",
-	"image/svg+xml": "svg",
-	"image/svg": "svg",
-	"image/bmp": "bmp",
-	"image/tiff": "tiff",
-	"image/x-icon": "ico",
-	"image/vnd.microsoft.icon": "ico",
-	"image/avif": "avif",
-	"image/heic": "heic",
+	'image/jpeg': 'jpg',
+	'image/jpg': 'jpg',
+	'image/png': 'png',
+	'image/gif': 'gif',
+	'image/webp': 'webp',
+	'image/svg+xml': 'svg',
+	'image/svg': 'svg',
+	'image/bmp': 'bmp',
+	'image/tiff': 'tiff',
+	'image/x-icon': 'ico',
+	'image/vnd.microsoft.icon': 'ico',
+	'image/avif': 'avif',
+	'image/heic': 'heic',
 };
 
 // Extensions we accept derived from a URL path. Anything else (or none) falls
 // back to the content-type, then to a generic default.
 const KNOWN_IMAGE_EXTS = new Set([
-	"jpg", "jpeg", "png", "gif", "webp", "svg", "bmp",
-	"tiff", "tif", "ico", "avif", "heic", "heif",
+	'jpg',
+	'jpeg',
+	'png',
+	'gif',
+	'webp',
+	'svg',
+	'bmp',
+	'tiff',
+	'tif',
+	'ico',
+	'avif',
+	'heic',
+	'heif',
 ]);
 
-const DEFAULT_EXT = "png";
+const DEFAULT_EXT = 'png';
 
 export class ImageDownloader {
 	private readonly fetcher: HttpFetcher;
@@ -92,7 +104,10 @@ export class ImageDownloader {
 	 * per-image failure leaves that reference untouched; a folder-creation
 	 * failure returns the input markdown unchanged.
 	 */
-	async downloadAndRewrite(markdown: string, folderPath: string): Promise<string> {
+	async downloadAndRewrite(
+		markdown: string,
+		folderPath: string,
+	): Promise<string> {
 		const folder = normalizeFolderPath(folderPath);
 
 		// Collect the distinct downloadable urls first. Resolving each url once
@@ -119,7 +134,11 @@ export class ImageDownloader {
 
 		for (const url of urls) {
 			try {
-				const localPath = await this.downloadOne(url, folder, usedNames);
+				const localPath = await this.downloadOne(
+					url,
+					folder,
+					usedNames,
+				);
 				if (localPath !== null) {
 					rewrites.set(url, localPath);
 				}
@@ -147,22 +166,26 @@ export class ImageDownloader {
 		folder: string,
 		usedNames: Set<string>,
 	): Promise<string | null> {
-		const response = await this.fetcher({ url, method: "GET" });
+		const response = await this.fetcher({ url, method: 'GET' });
 		if (response.status < 200 || response.status >= 300) {
-			console.error(`RSS Importer: image download skipped for ${url}: status ${response.status}`);
+			console.error(
+				`RSS Importer: image download skipped for ${url}: status ${response.status}`,
+			);
 			return null;
 		}
 		const bytes = response.arrayBuffer;
 		if (bytes.byteLength === 0) {
-			console.error(`RSS Importer: image download skipped for ${url}: empty body`);
+			console.error(
+				`RSS Importer: image download skipped for ${url}: empty body`,
+			);
 			return null;
 		}
 
-		const contentType = headerValue(response.headers, "content-type");
+		const contentType = headerValue(response.headers, 'content-type');
 		const ext = deriveExtension(url, contentType);
 		const baseName = deriveBaseName(url);
 		const fileName = uniqueFileName(baseName, ext, usedNames);
-		const targetPath = folder === "" ? fileName : `${folder}/${fileName}`;
+		const targetPath = folder === '' ? fileName : `${folder}/${fileName}`;
 
 		await this.vault.createBinary(targetPath, bytes);
 		return targetPath;
@@ -175,12 +198,12 @@ export class ImageDownloader {
 	 * clear error if the target conflicts).
 	 */
 	private async ensureFolder(folder: string): Promise<void> {
-		if (folder === "") {
+		if (folder === '') {
 			return;
 		}
-		const segments = folder.split("/");
+		const segments = folder.split('/');
 		for (let i = 1; i <= segments.length; i++) {
-			const partial = segments.slice(0, i).join("/");
+			const partial = segments.slice(0, i).join('/');
 			if (this.vault.getFolderByPath(partial) === null) {
 				await this.vault.createFolder(partial);
 			}
@@ -198,10 +221,10 @@ function headerValue(headers: Record<string, string>, name: string): string {
 	for (const key of Object.keys(headers)) {
 		if (key.toLowerCase() === wanted) {
 			const value = headers[key];
-			return value ?? "";
+			return value ?? '';
 		}
 	}
-	return "";
+	return '';
 }
 
 /** True when a url is an absolute http(s) link we should try to download. */
@@ -256,7 +279,7 @@ function deriveExtension(url: string, contentType: string): string {
 	if (fromUrl !== null) {
 		return fromUrl;
 	}
-	const ct = contentType.split(";")[0]?.trim().toLowerCase() ?? "";
+	const ct = contentType.split(';')[0]?.trim().toLowerCase() ?? '';
 	const mapped = CONTENT_TYPE_EXT[ct];
 	if (mapped !== undefined) {
 		return mapped;
@@ -267,7 +290,7 @@ function deriveExtension(url: string, contentType: string): string {
 /** Extract a known image extension from a URL path, or null. */
 function extFromUrl(url: string): string | null {
 	const path = urlPath(url);
-	const lastDot = path.lastIndexOf(".");
+	const lastDot = path.lastIndexOf('.');
 	if (lastDot === -1 || lastDot === path.length - 1) {
 		return null;
 	}
@@ -281,11 +304,11 @@ function extFromUrl(url: string): string | null {
  * authority so only the path text remains.
  */
 function urlPath(url: string): string {
-	let rest = url.replace(/^https?:\/\//i, "");
-	rest = rest.split("#")[0] ?? rest;
-	rest = rest.split("?")[0] ?? rest;
-	const slash = rest.indexOf("/");
-	return slash === -1 ? "" : rest.slice(slash);
+	let rest = url.replace(/^https?:\/\//i, '');
+	rest = rest.split('#')[0] ?? rest;
+	rest = rest.split('?')[0] ?? rest;
+	const slash = rest.indexOf('/');
+	return slash === -1 ? '' : rest.slice(slash);
 }
 
 /**
@@ -295,10 +318,11 @@ function urlPath(url: string): string {
  */
 function deriveBaseName(url: string): string {
 	const path = urlPath(url);
-	const segments = path.split("/").filter((s) => s.length > 0);
-	const last = segments.length > 0 ? segments[segments.length - 1] : undefined;
-	let base = last ?? "";
-	const dot = base.lastIndexOf(".");
+	const segments = path.split('/').filter((s) => s.length > 0);
+	const last =
+		segments.length > 0 ? segments[segments.length - 1] : undefined;
+	let base = last ?? '';
+	const dot = base.lastIndexOf('.');
 	if (dot > 0) {
 		base = base.slice(0, dot);
 	}
@@ -315,13 +339,13 @@ function deriveBaseName(url: string): string {
  * length. Returns "" when nothing usable remains so the caller can fall back.
  */
 function sanitizeBaseName(name: string): string {
-	let out = name.trim().replace(/\s+/g, "-");
+	let out = name.trim().replace(/\s+/g, '-');
 	// eslint-disable-next-line no-control-regex -- strip NUL and other non-whitespace control codes from the filename
-	out = out.replace(/[<>:"/\\|?*\x00-\x1f[\]]/g, "-");
-	out = out.replace(/-+/g, "-");
-	out = out.replace(/^[.\- ]+/, "").replace(/[.\- ]+$/, "");
+	out = out.replace(/[<>:"/\\|?*\x00-\x1f[\]]/g, '-');
+	out = out.replace(/-+/g, '-');
+	out = trimChars(out, '.- ');
 	if (out.length > 100) {
-		out = out.slice(0, 100).replace(/[.\- ]+$/, "");
+		out = trimTrailingChars(out.slice(0, 100), '.- ');
 	}
 	return out;
 }
@@ -365,15 +389,9 @@ function shortHash(input: string): string {
  * because this is an internal best-effort path, not a user-facing destination.
  */
 function normalizeFolderPath(folder: string): string {
-	const cleaned = folder
-		.trim()
-		.replace(/^\/+|\/+$/g, "")
-		.replace(/\/{2,}/g, "/");
+	const cleaned = trimChars(folder.trim(), '/').replace(/\/{2,}/g, '/');
 	const segments = cleaned
-		.split("/")
-		.filter((s) => s !== "" && s !== "." && s !== "..");
-	return segments.join("/");
+		.split('/')
+		.filter((s) => s !== '' && s !== '.' && s !== '..');
+	return segments.join('/');
 }
-
-/** Re-export FeedItem for callers that type a processImages adapter inline. */
-export type { FeedItem };

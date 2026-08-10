@@ -28,7 +28,7 @@
  * so it is unit-testable with a stub fetcher.
  */
 
-import type { HttpFetcher, HttpResponse, SourceType } from "./feed-source";
+import type { HttpFetcher, HttpResponse, SourceType } from './feed-source';
 
 /** Maximum number of 3xx redirects to follow before giving up. */
 const MAX_REDIRECT_HOPS = 5;
@@ -40,13 +40,13 @@ const HTTP_REDIRECT_MIN = 300;
 const HTTP_REDIRECT_MAX = 400;
 
 /** The host all Substack handle and profile-API requests go through. */
-const SUBSTACK_HOST = "substack.com";
+const SUBSTACK_HOST = 'substack.com';
 
 /** Suffix that marks a Substack-hosted subdomain. */
-const SUBSTACK_SUFFIX = ".substack.com";
+const SUBSTACK_SUFFIX = '.substack.com';
 
 /** Path suffixes that unambiguously name a feed without probing. */
-const FEED_PATH_SUFFIXES = ["/feed", "/rss", "/feed/podcast"];
+const FEED_PATH_SUFFIXES = ['/feed', '/rss', '/feed/podcast'];
 
 /** The result of resolving an input to a canonical, fetchable feed. */
 export interface ResolverResult {
@@ -72,7 +72,7 @@ export class ResolveError extends Error {
 
 	constructor(message: string, cause?: unknown) {
 		super(message);
-		this.name = "ResolveError";
+		this.name = 'ResolveError';
 		this.cause = cause;
 	}
 }
@@ -84,7 +84,10 @@ interface ProfilePublication {
 }
 
 /** Looks up a header case-insensitively; headers may use any casing. */
-function getHeader(headers: Record<string, string>, name: string): string | undefined {
+function getHeader(
+	headers: Record<string, string>,
+	name: string,
+): string | undefined {
 	const target = name.toLowerCase();
 	for (const key of Object.keys(headers)) {
 		if (key.toLowerCase() === target) {
@@ -131,7 +134,7 @@ function isSubstackSubdomain(host: string): boolean {
 
 /** True when a path ends in a recognized feed suffix. */
 function hasFeedPathSuffix(pathname: string): boolean {
-	const lower = pathname.replace(/\/$/, "").toLowerCase();
+	const lower = pathname.replace(/\/$/, '').toLowerCase();
 	return FEED_PATH_SUFFIXES.some((suffix) => lower.endsWith(suffix));
 }
 
@@ -141,7 +144,9 @@ function looksLikeXmlContentType(contentType: string | undefined): boolean {
 		return false;
 	}
 	const lower = contentType.toLowerCase();
-	return lower.includes("xml") || lower.includes("rss") || lower.includes("atom");
+	return (
+		lower.includes('xml') || lower.includes('rss') || lower.includes('atom')
+	);
 }
 
 /**
@@ -152,10 +157,10 @@ function looksLikeXmlContentType(contentType: string | undefined): boolean {
 function bodyLooksLikeFeed(text: string): boolean {
 	const head = text.trimStart().slice(0, 200).toLowerCase();
 	return (
-		head.startsWith("<?xml") ||
-		head.startsWith("<rss") ||
-		head.startsWith("<feed") ||
-		head.startsWith("<rdf")
+		head.startsWith('<?xml') ||
+		head.startsWith('<rss') ||
+		head.startsWith('<feed') ||
+		head.startsWith('<rdf')
 	);
 }
 
@@ -180,18 +185,21 @@ function bodyIsSubstackFeed(text: string): boolean {
  * as a generic feed at the URL the redirect chain landed on. Shared by the
  * explicit-feed-URL and probe paths so both detect custom-domain Substacks.
  */
-function classifyFeedResponse(finalUrl: URL, response: HttpResponse): ResolverResult {
+function classifyFeedResponse(
+	finalUrl: URL,
+	response: HttpResponse,
+): ResolverResult {
 	const host = finalUrl.hostname.toLowerCase();
 	if (bodyIsSubstackFeed(response.text)) {
 		return {
-			sourceType: "substack",
+			sourceType: 'substack',
 			canonicalHost: host,
 			feedUrl: `https://${host}/feed`,
 			handle: null,
 		};
 	}
 	return {
-		sourceType: "generic",
+		sourceType: 'generic',
 		canonicalHost: host,
 		feedUrl: finalUrl.toString(),
 		handle: null,
@@ -209,7 +217,8 @@ function extractHandle(raw: string): string | null {
 	if (bare) {
 		return bare[1] ?? null;
 	}
-	const withScheme = /^(?:https?:\/\/)?(?:www\.)?substack\.com\/@([A-Za-z0-9_-]+)/i.exec(trimmed);
+	const withScheme =
+		/^(?:https?:\/\/)?(?:www\.)?substack\.com\/@([\w-]+)/i.exec(trimmed);
 	if (withScheme) {
 		return withScheme[1] ?? null;
 	}
@@ -221,14 +230,19 @@ function extractHandle(raw: string): string | null {
  * domain when present, otherwise `<subdomain>.substack.com`. Returns null when
  * neither field is a usable string.
  */
-function hostFromPublication(pub: ProfilePublication | undefined): string | null {
+function hostFromPublication(
+	pub: ProfilePublication | undefined,
+): string | null {
 	if (pub === undefined) {
 		return null;
 	}
-	if (typeof pub.custom_domain === "string" && pub.custom_domain.trim().length > 0) {
+	if (
+		typeof pub.custom_domain === 'string' &&
+		pub.custom_domain.trim().length > 0
+	) {
 		return pub.custom_domain.trim().toLowerCase();
 	}
-	if (typeof pub.subdomain === "string" && pub.subdomain.trim().length > 0) {
+	if (typeof pub.subdomain === 'string' && pub.subdomain.trim().length > 0) {
 		return `${pub.subdomain.trim().toLowerCase()}${SUBSTACK_SUFFIX}`;
 	}
 	return null;
@@ -240,7 +254,7 @@ function hostFromPublication(pub: ProfilePublication | undefined): string | null
  * first `publicationUsers` entry. Returns undefined when the JSON has none.
  */
 function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === "object" && value !== null;
+	return typeof value === 'object' && value !== null;
 }
 
 function publicationFromProfile(json: unknown): ProfilePublication | undefined {
@@ -248,19 +262,21 @@ function publicationFromProfile(json: unknown): ProfilePublication | undefined {
 		return undefined;
 	}
 
-	const primary = json["primaryPublication"];
+	const primary = json['primaryPublication'];
 	if (isRecord(primary)) {
 		return primary;
 	}
 
-	const users = json["publicationUsers"];
+	const users = json['publicationUsers'];
 	if (Array.isArray(users)) {
 		const list: unknown[] = users;
 		const primaryUser: unknown =
-			list.find((u): u is Record<string, unknown> => isRecord(u) && u["is_primary"] === true) ??
-			list[0];
+			list.find(
+				(u): u is Record<string, unknown> =>
+					isRecord(u) && u['is_primary'] === true,
+			) ?? list[0];
 		if (isRecord(primaryUser)) {
-			const pub = primaryUser["publication"];
+			const pub = primaryUser['publication'];
 			if (isRecord(pub)) {
 				return pub;
 			}
@@ -299,7 +315,7 @@ export class FeedResolver {
 	async resolve(input: string): Promise<ResolverResult> {
 		const trimmed = input.trim();
 		if (trimmed.length === 0) {
-			throw new ResolveError("Empty input");
+			throw new ResolveError('Empty input');
 		}
 
 		const handle = extractHandle(trimmed);
@@ -312,7 +328,9 @@ export class FeedResolver {
 		if (isSubstackApex(url.hostname)) {
 			// `substack.com/...` that is not an `@handle` is not a feed we can
 			// canonicalize without more information.
-			throw new ResolveError(`Not a resolvable Substack input: ${trimmed}`);
+			throw new ResolveError(
+				`Not a resolvable Substack input: ${trimmed}`,
+			);
 		}
 
 		// A Substack post URL is recognized as Substack only on a substack.com
@@ -345,7 +363,9 @@ export class FeedResolver {
 			throw new ResolveError(`Profile lookup failed for @${handle}`, err);
 		}
 		if (response.status < 200 || response.status >= 300) {
-			throw new ResolveError(`Profile lookup for @${handle} returned status ${response.status}`);
+			throw new ResolveError(
+				`Profile lookup for @${handle} returned status ${response.status}`,
+			);
 		}
 
 		const publication = publicationFromProfile(response.json);
@@ -360,11 +380,14 @@ export class FeedResolver {
 	 * Canonicalizes a Substack host by walking redirects from `host/feed`, then
 	 * returns the canonical feed URL. The host the chain lands on is canonical.
 	 */
-	private async resolveSubstackHost(host: string, handle: string | null): Promise<ResolverResult> {
+	private async resolveSubstackHost(
+		host: string,
+		handle: string | null,
+	): Promise<ResolverResult> {
 		const candidate = `https://${host.toLowerCase()}/feed`;
 		const canonicalHost = await this.walkToCanonicalHost(candidate);
 		return {
-			sourceType: "substack",
+			sourceType: 'substack',
 			canonicalHost,
 			feedUrl: `https://${canonicalHost}/feed`,
 			handle,
@@ -377,7 +400,9 @@ export class FeedResolver {
 	 * custom-domain Substack served at `/feed` is recognized as Substack rather
 	 * than generic.
 	 */
-	private async resolveExplicitFeedUrl(feedUrl: string): Promise<ResolverResult> {
+	private async resolveExplicitFeedUrl(
+		feedUrl: string,
+	): Promise<ResolverResult> {
 		const { finalUrl, response } = await this.walkRedirects(feedUrl);
 		return classifyFeedResponse(finalUrl, response);
 	}
@@ -391,8 +416,10 @@ export class FeedResolver {
 	private async probeForFeed(host: string): Promise<ResolverResult> {
 		const candidate = `https://${host.toLowerCase()}/feed`;
 		const { finalUrl, response } = await this.walkRedirects(candidate);
-		const contentType = getHeader(response.headers, "Content-Type");
-		const isXml = looksLikeXmlContentType(contentType) || bodyLooksLikeFeed(response.text);
+		const contentType = getHeader(response.headers, 'Content-Type');
+		const isXml =
+			looksLikeXmlContentType(contentType) ||
+			bodyLooksLikeFeed(response.text);
 		if (response.status >= 200 && response.status < 300 && isXml) {
 			return classifyFeedResponse(finalUrl, response);
 		}
@@ -415,14 +442,19 @@ export class FeedResolver {
 	 * requested URL. A 3xx that exceeds the hop cap, or one missing a Location
 	 * header, raises a ResolveError.
 	 */
-	private async walkRedirects(startUrl: string): Promise<{ finalUrl: URL; response: HttpResponse }> {
+	private async walkRedirects(
+		startUrl: string,
+	): Promise<{ finalUrl: URL; response: HttpResponse }> {
 		let current = parseUrl(startUrl);
 		for (let hop = 0; hop < MAX_REDIRECT_HOPS; hop += 1) {
 			let response: HttpResponse;
 			try {
 				response = await this.fetcher({ url: current.toString() });
 			} catch (err) {
-				throw new ResolveError(`Request failed for ${current.toString()}`, err);
+				throw new ResolveError(
+					`Request failed for ${current.toString()}`,
+					err,
+				);
 			}
 
 			if (!isRedirect(response.status)) {
@@ -431,7 +463,7 @@ export class FeedResolver {
 				return { finalUrl: current, response };
 			}
 
-			const location = getHeader(response.headers, "Location");
+			const location = getHeader(response.headers, 'Location');
 			if (location === undefined || location.trim().length === 0) {
 				throw new ResolveError(
 					`Redirect from ${current.toString()} had no Location header`,

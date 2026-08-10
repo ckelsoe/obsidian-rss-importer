@@ -11,14 +11,18 @@
 // shows the summary notice plus a per-item breakdown. The modal owns its abort
 // flag and any timer, both reset on close.
 
-import { App, Modal, Notice, setIcon } from "obsidian";
-import type { FeedItem, ResolvedFeed } from "./feed-source";
-import type { FeedConfig, RssImporterSettings } from "./settings";
-import type { DismissStore } from "./dismiss-store";
-import type { ImportRunner, ImportProgress, ImportTally } from "./import-runner";
-import { formatImportNotice } from "./import-runner";
-import { buildFeedItemIndex } from "./vault-index";
-import type { ImportedRecord } from "./vault-index";
+import { App, Modal, Notice, setIcon } from 'obsidian';
+import type { FeedItem, ResolvedFeed } from './feed-source';
+import type { FeedConfig, RssImporterSettings } from './settings';
+import type { DismissStore } from './dismiss-store';
+import type {
+	ImportRunner,
+	ImportProgress,
+	ImportTally,
+} from './import-runner';
+import { formatImportNotice } from './import-runner';
+import { buildFeedItemIndex } from './vault-index';
+import type { ImportedRecord } from './vault-index';
 
 /** Soft cap on how many items to enumerate for the modal list. */
 const LIST_ITEM_LIMIT = 50;
@@ -26,11 +30,11 @@ const LIST_ITEM_LIMIT = 50;
 /** How many older items one "Load older" click pulls from the archive. */
 const LOAD_OLDER_PAGE_SIZE = 12;
 
-export type ItemBadgeState = "imported" | "dismissed" | "available";
+export type ItemBadgeState = 'imported' | 'dismissed' | 'available';
 
 export interface ImportModalDeps {
 	feed: FeedConfig;
-	source: import("./feed-source").FeedSource;
+	source: import('./feed-source').FeedSource;
 	runner: ImportRunner;
 	settings: RssImporterSettings;
 	dismissStore: DismissStore;
@@ -53,7 +57,7 @@ export function buildResolvedFeedFromConfig(feed: FeedConfig): ResolvedFeed {
 		publicationTitle: feed.publicationTitle,
 		author: feed.author,
 		sampleTitles: [],
-		audienceHint: "unknown",
+		audienceHint: 'unknown',
 	};
 }
 
@@ -66,15 +70,15 @@ export function badgeStateForItem(
 	item: FeedItem,
 	feedId: string,
 	vaultIndex: ReadonlyMap<string, ImportedRecord>,
-	dismissStore: Pick<DismissStore, "isDismissed">,
+	dismissStore: Pick<DismissStore, 'isDismissed'>,
 ): ItemBadgeState {
 	if (vaultIndex.has(item.id)) {
-		return "imported";
+		return 'imported';
 	}
 	if (dismissStore.isDismissed(feedId, item.id)) {
-		return "dismissed";
+		return 'dismissed';
 	}
-	return "available";
+	return 'available';
 }
 
 /**
@@ -86,11 +90,14 @@ export function selectableItemIds(
 	items: readonly FeedItem[],
 	feedId: string,
 	vaultIndex: ReadonlyMap<string, ImportedRecord>,
-	dismissStore: Pick<DismissStore, "isDismissed">,
+	dismissStore: Pick<DismissStore, 'isDismissed'>,
 ): string[] {
 	const ids: string[] = [];
 	for (const item of items) {
-		if (badgeStateForItem(item, feedId, vaultIndex, dismissStore) === "available") {
+		if (
+			badgeStateForItem(item, feedId, vaultIndex, dismissStore) ===
+			'available'
+		) {
 			ids.push(item.id);
 		}
 	}
@@ -103,7 +110,7 @@ export interface SelectAllControlState {
 	/** True when nothing is selectable, so the control is inert. */
 	disabled: boolean;
 	/** What a click should do given the current selection. */
-	action: "select" | "clear";
+	action: 'select' | 'clear';
 }
 
 /**
@@ -119,12 +126,12 @@ export function selectAllControlState(
 	selectedSelectableCount: number,
 ): SelectAllControlState {
 	if (selectableCount === 0) {
-		return { label: "Select all", disabled: true, action: "select" };
+		return { label: 'Select all', disabled: true, action: 'select' };
 	}
 	const allSelected = selectedSelectableCount >= selectableCount;
 	return allSelected
-		? { label: "Deselect all", disabled: false, action: "clear" }
-		: { label: "Select all", disabled: false, action: "select" };
+		? { label: 'Deselect all', disabled: false, action: 'clear' }
+		: { label: 'Select all', disabled: false, action: 'select' };
 }
 
 interface ItemRow {
@@ -183,37 +190,48 @@ export class ImportModal extends Modal {
 		this.aborted = false;
 		const { contentEl } = this;
 		contentEl.empty();
-		contentEl.addClass("rss-importer-import-modal");
+		contentEl.addClass('rss-importer-import-modal');
 		this.setTitle(`Import from ${this.deps.feed.publicationTitle}`);
 
 		// Toolbar above the list. Left: a running count of loaded items that grows
 		// as endless scroll pages the archive, then reads "All N" once exhausted.
 		// Right: how many of the loaded items are selected, plus a toggle that
 		// selects every available (not-yet-imported) item or clears them all.
-		const toolbar = contentEl.createDiv({ cls: "rss-importer-list-toolbar" });
-		this.loadCountEl = toolbar.createSpan({ cls: "rss-importer-load-count" });
-
-		const toolbarRight = toolbar.createDiv({ cls: "rss-importer-toolbar-right" });
-		this.selectCountEl = toolbarRight.createSpan({ cls: "rss-importer-select-count" });
-		const selectAllBtn = toolbarRight.createEl("button", {
-			cls: "rss-importer-select-all-button",
-			text: "Select all",
-			attr: { type: "button" },
+		const toolbar = contentEl.createDiv({
+			cls: 'rss-importer-list-toolbar',
 		});
-		selectAllBtn.toggleAttribute("disabled", true);
-		selectAllBtn.addEventListener("click", () => {
+		this.loadCountEl = toolbar.createSpan({
+			cls: 'rss-importer-load-count',
+		});
+
+		const toolbarRight = toolbar.createDiv({
+			cls: 'rss-importer-toolbar-right',
+		});
+		this.selectCountEl = toolbarRight.createSpan({
+			cls: 'rss-importer-select-count',
+		});
+		const selectAllBtn = toolbarRight.createEl('button', {
+			cls: 'rss-importer-select-all-button',
+			text: 'Select all',
+			attr: { type: 'button' },
+		});
+		selectAllBtn.toggleAttribute('disabled', true);
+		selectAllBtn.addEventListener('click', () => {
 			this.toggleSelectAll();
 		});
 		this.selectAllButtonEl = selectAllBtn;
 
-		this.listEl = contentEl.createDiv({ cls: "rss-importer-item-list" });
-		this.renderListMessage("Loading items…");
+		this.listEl = contentEl.createDiv({ cls: 'rss-importer-item-list' });
+		this.renderListMessage('Loading items…');
 
 		// Endless scroll: when the source has an archive, watch a bottom sentinel
 		// inside the scrollable list and auto-load older items as it comes into
 		// view. The "Load older" button below stays as a fallback and as the
 		// terminal "No older items" indicator.
-		if (this.deps.feed.sourceType === "substack" && typeof IntersectionObserver !== "undefined") {
+		if (
+			this.deps.feed.sourceType === 'substack' &&
+			typeof IntersectionObserver !== 'undefined'
+		) {
 			this.olderObserver = new IntersectionObserver(
 				(entries) => {
 					for (const entry of entries) {
@@ -225,48 +243,52 @@ export class ImportModal extends Modal {
 				},
 				// A margin so the next page starts loading just before the user
 				// hits the very bottom, keeping the scroll feeling continuous.
-				{ root: this.listEl, rootMargin: "200px" },
+				{ root: this.listEl, rootMargin: '200px' },
 			);
 		}
 
 		// Archive backfill is Substack-only: generic feeds expose no older items
 		// beyond the recent window, so the control is created only for Substack.
-		if (this.deps.feed.sourceType === "substack") {
-			this.loadOlderEl = contentEl.createDiv({ cls: "rss-importer-load-older" });
-			const olderBtn = this.loadOlderEl.createEl("button", {
-				cls: "rss-importer-load-older-button",
-				text: "Load older",
-				attr: { type: "button" },
+		if (this.deps.feed.sourceType === 'substack') {
+			this.loadOlderEl = contentEl.createDiv({
+				cls: 'rss-importer-load-older',
 			});
-			olderBtn.addEventListener("click", () => {
+			const olderBtn = this.loadOlderEl.createEl('button', {
+				cls: 'rss-importer-load-older-button',
+				text: 'Load older',
+				attr: { type: 'button' },
+			});
+			olderBtn.addEventListener('click', () => {
 				void this.loadOlder();
 			});
 			this.loadOlderButtonEl = olderBtn;
 			// Hidden until the first page of items has loaded.
-			this.loadOlderEl.toggleClass("is-hidden", true);
+			this.loadOlderEl.toggleClass('is-hidden', true);
 		}
 
-		this.progressEl = contentEl.createDiv({ cls: "rss-importer-progress" });
-		this.summaryEl = contentEl.createDiv({ cls: "rss-importer-summary" });
+		this.progressEl = contentEl.createDiv({ cls: 'rss-importer-progress' });
+		this.summaryEl = contentEl.createDiv({ cls: 'rss-importer-summary' });
 
-		const actions = contentEl.createDiv({ cls: "rss-importer-modal-actions" });
-		const importBtn = actions.createEl("button", {
-			cls: "rss-importer-import-button mod-cta",
-			text: "Import selected",
-			attr: { type: "button" },
+		const actions = contentEl.createDiv({
+			cls: 'rss-importer-modal-actions',
 		});
-		importBtn.toggleAttribute("disabled", true);
-		importBtn.addEventListener("click", () => {
+		const importBtn = actions.createEl('button', {
+			cls: 'rss-importer-import-button mod-cta',
+			text: 'Import selected',
+			attr: { type: 'button' },
+		});
+		importBtn.toggleAttribute('disabled', true);
+		importBtn.addEventListener('click', () => {
 			void this.runImport();
 		});
 		this.importButtonEl = importBtn;
 
-		const closeBtn = actions.createEl("button", {
-			cls: "rss-importer-close-button",
-			text: "Close",
-			attr: { type: "button" },
+		const closeBtn = actions.createEl('button', {
+			cls: 'rss-importer-close-button',
+			text: 'Close',
+			attr: { type: 'button' },
 		});
-		closeBtn.addEventListener("click", () => {
+		closeBtn.addEventListener('click', () => {
 			this.close();
 		});
 
@@ -297,17 +319,24 @@ export class ImportModal extends Modal {
 	private async loadItems(): Promise<void> {
 		try {
 			const resolved = buildResolvedFeedFromConfig(this.deps.feed);
-			const items = await this.deps.source.listItems(resolved, { limit: LIST_ITEM_LIMIT });
+			const items = await this.deps.source.listItems(resolved, {
+				limit: LIST_ITEM_LIMIT,
+			});
 			if (this.aborted) {
 				return;
 			}
 			this.items = items;
-			this.vaultIndex = buildFeedItemIndex(this.app, this.deps.feed.destinationFolder);
+			this.vaultIndex = buildFeedItemIndex(
+				this.app,
+				this.deps.feed.destinationFolder,
+			);
 			this.renderItems();
 			this.refreshLoadOlder();
 		} catch (err) {
 			this.renderListMessage("Could not load this feed's items.");
-			new Notice("Could not load this feed. See the console for details.");
+			new Notice(
+				'Could not load this feed. See the console for details.',
+			);
 			console.error(err);
 		}
 	}
@@ -350,7 +379,9 @@ export class ImportModal extends Modal {
 			}
 			this.renderItems();
 		} catch (err) {
-			new Notice("Could not load older items. See the console for details.");
+			new Notice(
+				'Could not load older items. See the console for details.',
+			);
 			console.error(err);
 		} finally {
 			this.loadingOlder = false;
@@ -372,14 +403,14 @@ export class ImportModal extends Modal {
 			return;
 		}
 		if (!this.hasMoreOlder) {
-			wrap.toggleClass("is-hidden", false);
-			btn.toggleAttribute("disabled", true);
-			btn.setText("No older items");
+			wrap.toggleClass('is-hidden', false);
+			btn.toggleAttribute('disabled', true);
+			btn.setText('No older items');
 			return;
 		}
-		wrap.toggleClass("is-hidden", false);
-		btn.toggleAttribute("disabled", this.loadingOlder);
-		btn.setText(this.loadingOlder ? "Loading…" : "Load older");
+		wrap.toggleClass('is-hidden', false);
+		btn.toggleAttribute('disabled', this.loadingOlder);
+		btn.setText(this.loadingOlder ? 'Loading…' : 'Load older');
 	}
 
 	private renderListMessage(message: string): void {
@@ -388,7 +419,7 @@ export class ImportModal extends Modal {
 			return;
 		}
 		el.empty();
-		el.createDiv({ cls: "rss-importer-list-message", text: message });
+		el.createDiv({ cls: 'rss-importer-list-message', text: message });
 	}
 
 	// Render one row per item with its badge and per-row actions.
@@ -401,7 +432,7 @@ export class ImportModal extends Modal {
 		this.rows.length = 0;
 
 		if (this.items.length === 0) {
-			this.renderListMessage("This feed has no items right now.");
+			this.renderListMessage('This feed has no items right now.');
 			this.refreshImportButton();
 			this.refreshSelectAll();
 			this.refreshLoadCount();
@@ -430,21 +461,23 @@ export class ImportModal extends Modal {
 			this.deps.dismissStore,
 		);
 
-		const rowEl = parent.createDiv({ cls: `rss-importer-item-row is-${state}` });
+		const rowEl = parent.createDiv({
+			cls: `rss-importer-item-row is-${state}`,
+		});
 
 		// Selection cell: a checkbox only for available items; a badge for
 		// imported/dismissed rows so the layout stays aligned.
-		const selectCell = rowEl.createDiv({ cls: "rss-importer-item-select" });
+		const selectCell = rowEl.createDiv({ cls: 'rss-importer-item-select' });
 		let checkbox: HTMLInputElement | null = null;
-		if (state === "available") {
-			checkbox = selectCell.createEl("input", {
-				cls: "rss-importer-item-checkbox",
-				attr: { type: "checkbox" },
+		if (state === 'available') {
+			checkbox = selectCell.createEl('input', {
+				cls: 'rss-importer-item-checkbox',
+				attr: { type: 'checkbox' },
 			});
 			// Restore prior selection across re-renders.
 			checkbox.checked = this.selectedIds.has(item.id);
 			const box = checkbox;
-			checkbox.addEventListener("change", () => {
+			checkbox.addEventListener('change', () => {
 				if (box.checked) {
 					this.selectedIds.add(item.id);
 				} else {
@@ -455,35 +488,41 @@ export class ImportModal extends Modal {
 			});
 		}
 
-		const main = rowEl.createDiv({ cls: "rss-importer-item-main" });
-		const titleEl = main.createDiv({ cls: "rss-importer-item-title" });
-		titleEl.setText(item.title.length > 0 ? item.title : "(untitled)");
+		const main = rowEl.createDiv({ cls: 'rss-importer-item-main' });
+		const titleEl = main.createDiv({ cls: 'rss-importer-item-title' });
+		titleEl.setText(item.title.length > 0 ? item.title : '(untitled)');
 
-		const metaEl = main.createDiv({ cls: "rss-importer-item-meta" });
+		const metaEl = main.createDiv({ cls: 'rss-importer-item-meta' });
 		this.renderBadge(metaEl, state);
 		if (item.publishedAt !== null) {
-			metaEl.createSpan({ cls: "rss-importer-item-date", text: formatDate(item.publishedAt) });
-		}
-		if (item.audience === "paid") {
 			metaEl.createSpan({
-				cls: "rss-importer-audience-badge rss-importer-audience-paid",
-				text: "Paid",
+				cls: 'rss-importer-item-date',
+				text: formatDate(item.publishedAt),
+			});
+		}
+		if (item.audience === 'paid') {
+			metaEl.createSpan({
+				cls: 'rss-importer-audience-badge rss-importer-audience-paid',
+				text: 'Paid',
 			});
 		}
 		if (item.isTruncated) {
-			metaEl.createSpan({ cls: "rss-importer-item-truncated", text: "Teaser" });
+			metaEl.createSpan({
+				cls: 'rss-importer-item-truncated',
+				text: 'Teaser',
+			});
 		}
 
-		const actions = rowEl.createDiv({ cls: "rss-importer-item-actions" });
-		const dismissed = state === "dismissed";
-		const dismissBtn = actions.createEl("button", {
-			cls: "rss-importer-item-dismiss",
-			text: dismissed ? "Undismiss" : "Dismiss",
-			attr: { type: "button" },
+		const actions = rowEl.createDiv({ cls: 'rss-importer-item-actions' });
+		const dismissed = state === 'dismissed';
+		const dismissBtn = actions.createEl('button', {
+			cls: 'rss-importer-item-dismiss',
+			text: dismissed ? 'Undismiss' : 'Dismiss',
+			attr: { type: 'button' },
 		});
 		// Imported rows can still be dismissed/undismissed; the toggle keys off
 		// the current dismiss-store state rather than the rendered badge.
-		dismissBtn.addEventListener("click", () => {
+		dismissBtn.addEventListener('click', () => {
 			void this.toggleDismiss(item);
 		});
 
@@ -491,17 +530,28 @@ export class ImportModal extends Modal {
 	}
 
 	private renderBadge(parent: HTMLElement, state: ItemBadgeState): void {
-		const badge = parent.createSpan({ cls: `rss-importer-badge rss-importer-badge-${state}` });
-		const icon = badge.createSpan({ cls: "rss-importer-badge-icon" });
-		if (state === "imported") {
-			setIcon(icon, "check");
-			badge.createSpan({ cls: "rss-importer-badge-text", text: "Imported" });
-		} else if (state === "dismissed") {
-			setIcon(icon, "eye-off");
-			badge.createSpan({ cls: "rss-importer-badge-text", text: "Dismissed" });
+		const badge = parent.createSpan({
+			cls: `rss-importer-badge rss-importer-badge-${state}`,
+		});
+		const icon = badge.createSpan({ cls: 'rss-importer-badge-icon' });
+		if (state === 'imported') {
+			setIcon(icon, 'check');
+			badge.createSpan({
+				cls: 'rss-importer-badge-text',
+				text: 'Imported',
+			});
+		} else if (state === 'dismissed') {
+			setIcon(icon, 'eye-off');
+			badge.createSpan({
+				cls: 'rss-importer-badge-text',
+				text: 'Dismissed',
+			});
 		} else {
-			setIcon(icon, "circle");
-			badge.createSpan({ cls: "rss-importer-badge-text", text: "Available" });
+			setIcon(icon, 'circle');
+			badge.createSpan({
+				cls: 'rss-importer-badge-text',
+				text: 'Available',
+			});
 		}
 	}
 
@@ -520,7 +570,9 @@ export class ImportModal extends Modal {
 			}
 			this.renderItems();
 		} catch (err) {
-			new Notice("Could not update the dismissed state. See the console for details.");
+			new Notice(
+				'Could not update the dismissed state. See the console for details.',
+			);
 			console.error(err);
 		}
 	}
@@ -552,7 +604,7 @@ export class ImportModal extends Modal {
 		if (!this.hasMoreOlder) {
 			return;
 		}
-		this.sentinelEl = el.createDiv({ cls: "rss-importer-scroll-sentinel" });
+		this.sentinelEl = el.createDiv({ cls: 'rss-importer-scroll-sentinel' });
 		observer.observe(this.sentinelEl);
 	}
 
@@ -566,13 +618,15 @@ export class ImportModal extends Modal {
 			this.vaultIndex,
 			this.deps.dismissStore,
 		);
-		const selectedSelectable = ids.filter((id) => this.selectedIds.has(id)).length;
+		const selectedSelectable = ids.filter((id) =>
+			this.selectedIds.has(id),
+		).length;
 		const state = selectAllControlState(ids.length, selectedSelectable);
 		if (state.disabled) {
 			return;
 		}
 		for (const id of ids) {
-			if (state.action === "select") {
+			if (state.action === 'select') {
 				this.selectedIds.add(id);
 			} else {
 				this.selectedIds.delete(id);
@@ -601,14 +655,20 @@ export class ImportModal extends Modal {
 			this.vaultIndex,
 			this.deps.dismissStore,
 		);
-		const selectedSelectable = ids.filter((id) => this.selectedIds.has(id)).length;
+		const selectedSelectable = ids.filter((id) =>
+			this.selectedIds.has(id),
+		).length;
 		const state = selectAllControlState(ids.length, selectedSelectable);
 		btn.setText(state.label);
-		btn.toggleAttribute("disabled", state.disabled);
+		btn.toggleAttribute('disabled', state.disabled);
 
 		const countEl = this.selectCountEl;
 		if (countEl !== null) {
-			countEl.setText(ids.length === 0 ? "" : `${selectedSelectable} of ${ids.length} selected`);
+			countEl.setText(
+				ids.length === 0
+					? ''
+					: `${selectedSelectable} of ${ids.length} selected`,
+			);
 		}
 	}
 
@@ -624,10 +684,11 @@ export class ImportModal extends Modal {
 		}
 		const n = this.items.length;
 		if (n === 0) {
-			el.setText("");
+			el.setText('');
 			return;
 		}
-		const moreToLoad = this.deps.feed.sourceType === "substack" && this.hasMoreOlder;
+		const moreToLoad =
+			this.deps.feed.sourceType === 'substack' && this.hasMoreOlder;
 		el.setText(moreToLoad ? `${n} items loaded` : `All ${n} items`);
 	}
 
@@ -637,8 +698,10 @@ export class ImportModal extends Modal {
 			return;
 		}
 		const count = this.selectedItems().length;
-		btn.toggleAttribute("disabled", this.importing || count === 0);
-		btn.setText(count > 0 ? `Import selected (${count})` : "Import selected");
+		btn.toggleAttribute('disabled', this.importing || count === 0);
+		btn.setText(
+			count > 0 ? `Import selected (${count})` : 'Import selected',
+		);
 	}
 
 	// Run the import over the selected items. Disables the button for the
@@ -651,7 +714,7 @@ export class ImportModal extends Modal {
 		}
 		const items = this.selectedItems();
 		if (items.length === 0) {
-			new Notice("Select at least one item to import.");
+			new Notice('Select at least one item to import.');
 			return;
 		}
 
@@ -673,13 +736,21 @@ export class ImportModal extends Modal {
 
 			// Refresh the index and re-render so imported items lose their
 			// checkbox and gain the imported badge.
-			this.vaultIndex = buildFeedItemIndex(this.app, this.deps.feed.destinationFolder);
+			this.vaultIndex = buildFeedItemIndex(
+				this.app,
+				this.deps.feed.destinationFolder,
+			);
 			// metadataCache updates asynchronously, so notes written this run may not
 			// be in the rebuilt index yet. Mark them imported directly from the result
 			// so their badge flips immediately without reopening the importer.
 			for (const result of tally.results) {
-				if (result.status === "created" || result.status === "overwritten") {
-					this.vaultIndex.set(result.item.id, { path: result.path ?? "" });
+				if (
+					result.status === 'created' ||
+					result.status === 'overwritten'
+				) {
+					this.vaultIndex.set(result.item.id, {
+						path: result.path ?? '',
+					});
 				}
 			}
 			// Drop now-imported items from the selection so the count stays right.
@@ -692,7 +763,7 @@ export class ImportModal extends Modal {
 			this.deps.onDone?.();
 		} catch (err) {
 			this.clearProgress();
-			new Notice("The import failed. See the console for details.");
+			new Notice('The import failed. See the console for details.');
 			console.error(err);
 		} finally {
 			this.importing = false;
@@ -706,10 +777,10 @@ export class ImportModal extends Modal {
 			return;
 		}
 		el.empty();
-		el.addClass("is-active");
-		const title = p.item.title.length > 0 ? p.item.title : "(untitled)";
+		el.addClass('is-active');
+		const title = p.item.title.length > 0 ? p.item.title : '(untitled)';
 		el.createSpan({
-			cls: "rss-importer-progress-text",
+			cls: 'rss-importer-progress-text',
 			text: `Importing ${p.index + 1} of ${p.total}: ${title}`,
 		});
 	}
@@ -720,7 +791,7 @@ export class ImportModal extends Modal {
 			return;
 		}
 		el.empty();
-		el.removeClass("is-active");
+		el.removeClass('is-active');
 	}
 
 	private clearSummary(): void {
@@ -739,22 +810,37 @@ export class ImportModal extends Modal {
 		el.empty();
 
 		el.createDiv({
-			cls: "rss-importer-summary-counts",
+			cls: 'rss-importer-summary-counts',
 			text: `${tally.created} created, ${tally.overwritten} overwritten, ${tally.skipped} skipped, ${tally.failed} failed`,
 		});
 
 		// Successes are reflected by the imported badge in the list above, so the
 		// summary only details failures. This keeps it compact instead of listing
 		// every item.
-		const failures = tally.results.filter((result) => result.status === "failed");
+		const failures = tally.results.filter(
+			(result) => result.status === 'failed',
+		);
 		if (failures.length > 0) {
-			const list = el.createEl("ul", { cls: "rss-importer-summary-list" });
+			const list = el.createEl('ul', {
+				cls: 'rss-importer-summary-list',
+			});
 			for (const result of failures) {
-				const li = list.createEl("li", { cls: "rss-importer-summary-item is-failed" });
-				const title = result.item.title.length > 0 ? result.item.title : "(untitled)";
-				li.createSpan({ cls: "rss-importer-summary-title", text: title });
+				const li = list.createEl('li', {
+					cls: 'rss-importer-summary-item is-failed',
+				});
+				const title =
+					result.item.title.length > 0
+						? result.item.title
+						: '(untitled)';
+				li.createSpan({
+					cls: 'rss-importer-summary-title',
+					text: title,
+				});
 				if (result.reason !== null && result.reason.length > 0) {
-					li.createSpan({ cls: "rss-importer-summary-reason", text: result.reason });
+					li.createSpan({
+						cls: 'rss-importer-summary-reason',
+						text: result.reason,
+					});
 				}
 			}
 		}
@@ -767,8 +853,8 @@ export class ImportModal extends Modal {
 function formatDate(iso: string): string {
 	const date = new Date(iso);
 	if (Number.isNaN(date.getTime())) {
-		return "";
+		return '';
 	}
-	const pad = (n: number): string => String(n).padStart(2, "0");
+	const pad = (n: number): string => String(n).padStart(2, '0');
 	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }

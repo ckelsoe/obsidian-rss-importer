@@ -7,7 +7,7 @@
 // how to commit a selection. Callers register an onSelect handler via the
 // inherited `onSelect` API to react when the user picks a folder.
 
-import { AbstractInputSuggest, App, TFolder } from "obsidian";
+import { AbstractInputSuggest, App, TFolder } from 'obsidian';
 
 export class FolderSuggest extends AbstractInputSuggest<string> {
 	private readonly inputEl: HTMLInputElement;
@@ -28,7 +28,7 @@ export class FolderSuggest extends AbstractInputSuggest<string> {
 		// non-empty queries by the substring test below (since "" never
 		// contains a non-empty needle).
 		if (lower.length === 0) {
-			folders.push("");
+			folders.push('');
 		}
 		for (const file of this.app.vault.getAllLoadedFiles()) {
 			if (!(file instanceof TFolder)) {
@@ -43,7 +43,7 @@ export class FolderSuggest extends AbstractInputSuggest<string> {
 	}
 
 	renderSuggestion(folder: string, el: HTMLElement): void {
-		el.setText(folder.length === 0 ? "/" : folder);
+		el.setText(folder.length === 0 ? '/' : folder);
 	}
 
 	// Commit the chosen folder: write it into the input, fire an `input` event
@@ -51,7 +51,7 @@ export class FolderSuggest extends AbstractInputSuggest<string> {
 	// then dismiss the dropdown.
 	selectSuggestion(folder: string): void {
 		this.inputEl.value = folder;
-		this.inputEl.dispatchEvent(new Event("input"));
+		this.inputEl.dispatchEvent(new Event('input'));
 		this.close();
 	}
 }

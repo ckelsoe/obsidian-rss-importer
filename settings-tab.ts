@@ -16,9 +16,9 @@ import {
 	SettingPage,
 	type Plugin,
 	type SettingDefinitionItem,
-} from "obsidian";
-import type { FeedSource, SourceType } from "./feed-source";
-import type { FeedConfig, RssImporterSettings } from "./settings";
+} from 'obsidian';
+import type { FeedSource, SourceType } from './feed-source';
+import type { FeedConfig, RssImporterSettings } from './settings';
 import {
 	REQUEST_DELAY_MIN,
 	REQUEST_DELAY_MAX,
@@ -26,8 +26,8 @@ import {
 	effectiveDownloadMedia,
 	effectiveMediaLocation,
 	effectiveMediaSubfolder,
-} from "./settings";
-import { AddFeedModal } from "./add-feed-modal";
+} from './settings';
+import { AddFeedModal } from './add-feed-modal';
 
 /**
  * The minimal plugin surface this tab and the modals it opens need. Declared
@@ -56,133 +56,141 @@ export class RssImporterSettingTab extends PluginSettingTab {
 		const feeds = this.plugin.settings.feeds;
 		return [
 			{
-				type: "list",
-				heading: "Feeds",
-				emptyState: "No feeds yet. Add one to start importing.",
+				type: 'list',
+				heading: 'Feeds',
+				emptyState: 'No feeds yet. Add one to start importing.',
 				onDelete: (index: number) => {
 					this.removeFeed(index);
 				},
 				addItem: {
-					name: "Add feed",
+					name: 'Add feed',
 					action: () => {
 						this.openAddFeed();
 					},
 				},
 				items: feeds.map((feed) => ({
-					type: "page" as const,
-					name: feed.publicationTitle.length > 0 ? feed.publicationTitle : feed.canonicalHost,
-					desc: feed.enabled ? feed.destinationFolder : `(disabled) ${feed.destinationFolder}`,
+					type: 'page' as const,
+					name:
+						feed.publicationTitle.length > 0
+							? feed.publicationTitle
+							: feed.canonicalHost,
+					desc: feed.enabled
+						? feed.destinationFolder
+						: `(disabled) ${feed.destinationFolder}`,
 					page: () => new FeedEditorPage(this, feed),
 				})),
 			},
 			{
-				type: "group",
-				heading: "Defaults",
+				type: 'group',
+				heading: 'Defaults',
 				items: [
 					{
-						name: "Show ribbon icon",
-						desc: "Add a left-ribbon button that opens the importer.",
-						control: { type: "toggle", key: "showRibbonIcon" },
+						name: 'Show ribbon icon',
+						desc: 'Add a left-ribbon button that opens the importer.',
+						control: { type: 'toggle', key: 'showRibbonIcon' },
 					},
 					{
-						name: "Duplicate handling",
-						desc: "What to do when a note already exists for an item.",
+						name: 'Duplicate handling',
+						desc: 'What to do when a note already exists for an item.',
 						control: {
-							type: "dropdown",
-							key: "duplicatePolicy",
+							type: 'dropdown',
+							key: 'duplicatePolicy',
 							options: {
-								skip: "Skip",
-								overwrite: "Overwrite",
-								prompt: "Ask each time",
+								skip: 'Skip',
+								overwrite: 'Overwrite',
+								prompt: 'Ask each time',
 							},
 						},
 					},
 					{
-						name: "Request delay",
-						desc: "Pause between feed requests, in milliseconds.",
+						name: 'Request delay',
+						desc: 'Pause between feed requests, in milliseconds.',
 						control: {
-							type: "slider",
-							key: "requestDelayMs",
+							type: 'slider',
+							key: 'requestDelayMs',
 							min: REQUEST_DELAY_MIN,
 							max: REQUEST_DELAY_MAX,
 							step: 100,
 						},
 					},
 					{
-						name: "Images",
-						desc: "Link to remote images, or download them into the vault.",
+						name: 'Images',
+						desc: 'Link to remote images, or download them into the vault.',
 						control: {
-							type: "dropdown",
-							key: "imagesMode",
+							type: 'dropdown',
+							key: 'imagesMode',
 							options: {
-								link: "Link to remote",
-								download: "Download into vault",
+								link: 'Link to remote',
+								download: 'Download into vault',
 							},
 						},
 					},
 					{
-						name: "Download media",
-						desc: "Save podcast audio and video enclosures locally, not just link them.",
-						control: { type: "toggle", key: "downloadMedia" },
+						name: 'Download media',
+						desc: 'Save podcast audio and video enclosures locally, not just link them.',
+						control: { type: 'toggle', key: 'downloadMedia' },
 					},
 					{
-						name: "Media location",
-						desc: "Save media into a vault subfolder, or to a folder outside the vault.",
+						name: 'Media location',
+						desc: 'Save media into a vault subfolder, or to a folder outside the vault.',
 						control: {
-							type: "dropdown",
-							key: "mediaLocation",
+							type: 'dropdown',
+							key: 'mediaLocation',
 							options: {
-								vault: "Vault subfolder",
-								outside: "Outside the vault",
+								vault: 'Vault subfolder',
+								outside: 'Outside the vault',
 							},
 						},
 					},
 					{
-						name: "Media subfolder",
+						name: 'Media subfolder',
 						desc: "Subfolder under each feed's folder for downloaded media.",
-						control: { type: "text", key: "mediaSubfolder" },
+						control: { type: 'text', key: 'mediaSubfolder' },
 					},
 					{
-						name: "Media folder outside vault",
-						desc: "Absolute folder path for media when saving outside the vault (desktop only).",
-						control: { type: "text", key: "mediaOutsideFolder" },
+						name: 'Media folder outside vault',
+						desc: 'Absolute folder path for media when saving outside the vault (desktop only).',
+						control: { type: 'text', key: 'mediaOutsideFolder' },
 					},
 					{
-						name: "Tag destination",
-						desc: "Save feed tags as a note property, or as Obsidian tags that show in the tag pane.",
+						name: 'Tag destination',
+						desc: 'Save feed tags as a note property, or as Obsidian tags that show in the tag pane.',
 						control: {
-							type: "dropdown",
-							key: "tagDestination",
+							type: 'dropdown',
+							key: 'tagDestination',
 							options: {
-								"feed-tags": "Note property (feed-tags)",
-								tags: "Obsidian tags",
+								'feed-tags': 'Note property (feed-tags)',
+								tags: 'Obsidian tags',
 							},
 						},
 					},
 					{
-						name: "Cleanup link hosts",
-						desc: "Comma-separated promo link hosts or paths (for example buymeacoffee.com, /subscribe). Blocks linking these are removed.",
-						control: { type: "text", key: "cleanupLinkHosts" },
+						name: 'Cleanup link hosts',
+						desc: 'Comma-separated promo link hosts or paths (for example buymeacoffee.com, /subscribe). Blocks linking these are removed.',
+						control: { type: 'text', key: 'cleanupLinkHosts' },
 					},
 					{
-						name: "Trim after last horizontal rule",
-						desc: "Remove everything after the last horizontal rule, the trailing footer region.",
-						control: { type: "toggle", key: "cleanupTrimAfterLastRule" },
+						name: 'Trim after last horizontal rule',
+						desc: 'Remove everything after the last horizontal rule, the trailing footer region.',
+						control: {
+							type: 'toggle',
+							key: 'cleanupTrimAfterLastRule',
+						},
 					},
 					{
-						name: "Parent folder",
-						desc: "Default parent folder for new feeds.",
-						control: { type: "folder", key: "defaultParentFolder" },
+						name: 'Parent folder',
+						desc: 'Default parent folder for new feeds.',
+						control: { type: 'folder', key: 'defaultParentFolder' },
 					},
 					{
-						name: "Note name template",
-						desc: "Tokens: {{date}}, {{title}}, {{slug}}.",
-						control: { type: "text", key: "noteNameTemplate" },
+						name: 'Note name template',
+						desc: 'Tokens: {{date}}, {{title}}, {{slug}}.',
+						control: { type: 'text', key: 'noteNameTemplate' },
 					},
 					{
-						name: "Verbose logging",
-						desc: "Write detailed import logs to the developer console.",
-						control: { type: "toggle", key: "debug" },
+						name: 'Verbose logging',
+						desc: 'Write detailed import logs to the developer console.',
+						control: { type: 'toggle', key: 'debug' },
 					},
 				],
 			},
@@ -198,20 +206,23 @@ export class RssImporterSettingTab extends PluginSettingTab {
 	// text control, so it round-trips through a comma-separated string here while
 	// every other key passes through unchanged.
 	getControlValue(key: string): unknown {
-		if (key === "cleanupLinkHosts") {
-			return this.plugin.settings.cleanupLinkHosts.join(", ");
+		if (key === 'cleanupLinkHosts') {
+			return this.plugin.settings.cleanupLinkHosts.join(', ');
 		}
-		return (this.plugin.settings as unknown as Record<string, unknown>)[key];
+		return (this.plugin.settings as unknown as Record<string, unknown>)[
+			key
+		];
 	}
 
 	async setControlValue(key: string, value: unknown): Promise<void> {
-		if (key === "cleanupLinkHosts") {
+		if (key === 'cleanupLinkHosts') {
 			this.plugin.settings.cleanupLinkHosts = String(value)
-				.split(",")
+				.split(',')
 				.map((host) => host.trim())
 				.filter((host) => host.length > 0);
 		} else {
-			(this.plugin.settings as unknown as Record<string, unknown>)[key] = value;
+			(this.plugin.settings as unknown as Record<string, unknown>)[key] =
+				value;
 		}
 		await this.plugin.saveSettings();
 		this.refreshDomState();
@@ -238,7 +249,6 @@ export class RssImporterSettingTab extends PluginSettingTab {
 		void this.plugin.saveSettings();
 		this.update();
 	}
-
 }
 
 // A navigable sub-page for editing one feed's metadata. SettingPage.display()
@@ -252,7 +262,10 @@ class FeedEditorPage extends SettingPage {
 		super();
 		this.tab = tab;
 		this.feed = feed;
-		this.title = feed.publicationTitle.length > 0 ? feed.publicationTitle : feed.canonicalHost;
+		this.title =
+			feed.publicationTitle.length > 0
+				? feed.publicationTitle
+				: feed.canonicalHost;
 	}
 
 	private get plugin(): RssImporterPluginLike {
@@ -265,8 +278,8 @@ class FeedEditorPage extends SettingPage {
 		editor.empty();
 
 		new Setting(editor)
-			.setName("Enabled")
-			.setDesc("Turn importing for this feed on or off.")
+			.setName('Enabled')
+			.setDesc('Turn importing for this feed on or off.')
 			.addToggle((toggle) =>
 				toggle.setValue(feed.enabled).onChange(async (value) => {
 					feed.enabled = value;
@@ -275,8 +288,8 @@ class FeedEditorPage extends SettingPage {
 			);
 
 		new Setting(editor)
-			.setName("Title")
-			.setDesc("Display name for this feed.")
+			.setName('Title')
+			.setDesc('Display name for this feed.')
 			.addText((text) =>
 				text.setValue(feed.publicationTitle).onChange(async (value) => {
 					feed.publicationTitle = value;
@@ -286,22 +299,26 @@ class FeedEditorPage extends SettingPage {
 			);
 
 		new Setting(editor)
-			.setName("Destination folder")
+			.setName('Destination folder')
 			.setDesc("Where this feed's notes are saved.")
 			.addText((text) =>
-				text.setValue(feed.destinationFolder).onChange(async (value) => {
-					feed.destinationFolder = value;
-					await this.plugin.saveSettings();
-				}),
+				text
+					.setValue(feed.destinationFolder)
+					.onChange(async (value) => {
+						feed.destinationFolder = value;
+						await this.plugin.saveSettings();
+					}),
 			);
 
 		new Setting(editor)
-			.setName("Tags")
-			.setDesc("Comma-separated tags applied to every note from this feed.")
+			.setName('Tags')
+			.setDesc(
+				'Comma-separated tags applied to every note from this feed.',
+			)
 			.addText((text) =>
-				text.setValue(feed.tags.join(", ")).onChange(async (value) => {
+				text.setValue(feed.tags.join(', ')).onChange(async (value) => {
 					feed.tags = value
-						.split(",")
+						.split(',')
 						.map((t) => t.trim())
 						.filter((t) => t.length > 0);
 					await this.plugin.saveSettings();
@@ -309,22 +326,24 @@ class FeedEditorPage extends SettingPage {
 			);
 
 		new Setting(editor)
-			.setName("Pull item tags")
+			.setName('Pull item tags')
 			.setDesc("Also import each item's own tags from the source feed.")
 			.addToggle((toggle) =>
-				toggle.setValue(feed.importSourceTags).onChange(async (value) => {
-					feed.importSourceTags = value;
-					await this.plugin.saveSettings();
-				}),
+				toggle
+					.setValue(feed.importSourceTags)
+					.onChange(async (value) => {
+						feed.importSourceTags = value;
+						await this.plugin.saveSettings();
+					}),
 			);
 
 		new Setting(editor)
-			.setName("Source type")
+			.setName('Source type')
 			.setDesc(
 				`Currently ${sourceTypeLabel(feed.sourceType)}. Re-detect if a custom-domain Substack was added before detection improved and is stuck at its recent window with no archive backfill.`,
 			)
 			.addButton((btn) =>
-				btn.setButtonText("Re-detect").onClick(async () => {
+				btn.setButtonText('Re-detect').onClick(async () => {
 					await this.redetectSource(btn);
 				}),
 			);
@@ -332,8 +351,10 @@ class FeedEditorPage extends SettingPage {
 		const settings = this.plugin.settings;
 
 		new Setting(editor)
-			.setName("Download media")
-			.setDesc("Save podcast audio and video enclosures locally for this feed.")
+			.setName('Download media')
+			.setDesc(
+				'Save podcast audio and video enclosures locally for this feed.',
+			)
 			.addToggle((toggle) =>
 				toggle
 					.setValue(effectiveDownloadMedia(feed, settings))
@@ -344,21 +365,24 @@ class FeedEditorPage extends SettingPage {
 			);
 
 		new Setting(editor)
-			.setName("Media location")
-			.setDesc("Save media into a vault subfolder, or to a folder outside the vault.")
+			.setName('Media location')
+			.setDesc(
+				'Save media into a vault subfolder, or to a folder outside the vault.',
+			)
 			.addDropdown((dropdown) =>
 				dropdown
-					.addOption("vault", "Vault subfolder")
-					.addOption("outside", "Outside the vault")
+					.addOption('vault', 'Vault subfolder')
+					.addOption('outside', 'Outside the vault')
 					.setValue(effectiveMediaLocation(feed, settings))
 					.onChange(async (value) => {
-						feed.mediaLocation = value === "outside" ? "outside" : "vault";
+						feed.mediaLocation =
+							value === 'outside' ? 'outside' : 'vault';
 						await this.plugin.saveSettings();
 					}),
 			);
 
 		new Setting(editor)
-			.setName("Media subfolder")
+			.setName('Media subfolder')
 			.setDesc("Subfolder under this feed's folder for downloaded media.")
 			.addText((text) =>
 				text
@@ -370,16 +394,16 @@ class FeedEditorPage extends SettingPage {
 			);
 
 		new Setting(editor)
-			.setName("Cleanup link hosts")
+			.setName('Cleanup link hosts')
 			.setDesc(
-				"One promo link host or path per line (for example buymeacoffee.com or /subscribe). Blocks linking these are removed.",
+				'One promo link host or path per line (for example buymeacoffee.com or /subscribe). Blocks linking these are removed.',
 			)
 			.addTextArea((text) =>
 				text
-					.setValue((feed.cleanupLinkHosts ?? []).join("\n"))
+					.setValue((feed.cleanupLinkHosts ?? []).join('\n'))
 					.onChange(async (value) => {
 						const hosts = value
-							.split("\n")
+							.split('\n')
 							.map((line) => line.trim())
 							.filter((line) => line.length > 0);
 						if (hosts.length > 0) {
@@ -392,8 +416,10 @@ class FeedEditorPage extends SettingPage {
 			);
 
 		new Setting(editor)
-			.setName("Trim after last horizontal rule")
-			.setDesc("Remove everything after the last horizontal rule, the trailing footer region.")
+			.setName('Trim after last horizontal rule')
+			.setDesc(
+				'Remove everything after the last horizontal rule, the trailing footer region.',
+			)
 			.addToggle((toggle) =>
 				toggle
 					.setValue(effectiveCleanupTrimAfterLastRule(feed, settings))
@@ -404,11 +430,11 @@ class FeedEditorPage extends SettingPage {
 			);
 
 		new Setting(editor)
-			.setName("Remove feed")
-			.setDesc("Delete this feed. Imported notes are left in place.")
+			.setName('Remove feed')
+			.setDesc('Delete this feed. Imported notes are left in place.')
 			.addButton((btn) =>
 				btn
-					.setButtonText("Remove")
+					.setButtonText('Remove')
 					.setDestructive()
 					.onClick(async () => {
 						const feeds = this.plugin.settings.feeds;
@@ -433,7 +459,7 @@ class FeedEditorPage extends SettingPage {
 	private async redetectSource(btn: ButtonComponent): Promise<void> {
 		const feed = this.feed;
 		btn.setDisabled(true);
-		btn.setButtonText("Checking…");
+		btn.setButtonText('Checking…');
 		try {
 			const { source } = this.plugin.makeSource(feed.feedUrl);
 			const resolved = await source.resolve(feed.feedUrl);
@@ -451,15 +477,17 @@ class FeedEditorPage extends SettingPage {
 			// this also resets the button, so no manual re-enable is needed here.
 			this.display();
 		} catch (err) {
-			new Notice("Could not re-detect the source. See the console for details.");
+			new Notice(
+				'Could not re-detect the source. See the console for details.',
+			);
 			console.error(err);
 			btn.setDisabled(false);
-			btn.setButtonText("Re-detect");
+			btn.setButtonText('Re-detect');
 		}
 	}
 }
 
 /** Human-readable label for a feed's source type, for UI copy. */
 function sourceTypeLabel(type: SourceType): string {
-	return type === "substack" ? "Substack" : "generic RSS";
+	return type === 'substack' ? 'Substack' : 'generic RSS';
 }

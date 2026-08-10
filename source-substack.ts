@@ -28,9 +28,9 @@ import type {
 	ListItemsOptions,
 	ResolvedFeed,
 	SourceType,
-} from "./feed-source";
-import { FeedResolver } from "./feed-resolver";
-import { detectPaywall } from "./paywall-detector";
+} from './feed-source';
+import { FeedResolver } from './feed-resolver';
+import { detectPaywall } from './paywall-detector';
 import {
 	applyLimit,
 	buildResolvedFeed,
@@ -39,7 +39,7 @@ import {
 	mapArchivePayload,
 	mapRawItemToFeedItem,
 	readPostBodyHtml,
-} from "./source-common";
+} from './source-common';
 
 /** Constructor dependencies. `resolver` defaults to one wrapping `fetcher`. */
 export interface SubstackFeedSourceDeps {
@@ -61,8 +61,14 @@ const DEFAULT_ARCHIVE_LIMIT = 12;
  * token sets accept "paid"/"free"), so a paid post whose fetched body is only a
  * teaser still resolves to truncated, and a free post stays free.
  */
-function applyPaywallPass(item: FeedItem, audienceField: string | null): FeedItem {
-	const verdict = detectPaywall({ audienceField, bodyHtml: item.contentHtml });
+function applyPaywallPass(
+	item: FeedItem,
+	audienceField: string | null,
+): FeedItem {
+	const verdict = detectPaywall({
+		audienceField,
+		bodyHtml: item.contentHtml,
+	});
 	return {
 		...item,
 		audience: verdict.audience,
@@ -71,7 +77,7 @@ function applyPaywallPass(item: FeedItem, audienceField: string | null): FeedIte
 }
 
 export class SubstackFeedSource implements FeedSource {
-	readonly type: SourceType = "substack";
+	readonly type: SourceType = 'substack';
 
 	private readonly fetcher: HttpFetcher;
 	private readonly resolver: FeedResolver;
@@ -99,7 +105,10 @@ export class SubstackFeedSource implements FeedSource {
 	 * archive instead, for backfilling items older than the RSS window. Honors
 	 * `opts.limit` in both modes.
 	 */
-	async listItems(feed: ResolvedFeed, opts?: ListItemsOptions): Promise<FeedItem[]> {
+	async listItems(
+		feed: ResolvedFeed,
+		opts?: ListItemsOptions,
+	): Promise<FeedItem[]> {
 		const offset = opts?.offset ?? 0;
 		if (offset > 0) {
 			return this.listArchiveItems(feed, offset, opts?.limit);
@@ -125,10 +134,15 @@ export class SubstackFeedSource implements FeedSource {
 		offset: number,
 		limit: number | undefined,
 	): Promise<FeedItem[]> {
-		const pageSize = limit !== undefined && limit > 0 ? limit : DEFAULT_ARCHIVE_LIMIT;
+		const pageSize =
+			limit !== undefined && limit > 0 ? limit : DEFAULT_ARCHIVE_LIMIT;
 		const url = `https://${feed.canonicalHost}/api/v1/archive?sort=new&limit=${pageSize}&offset=${offset}`;
-		const response = await this.fetcher({ url, method: "GET" });
-		const items = mapArchivePayload(response.json, feed.feedId, feed.canonicalHost);
+		const response = await this.fetcher({ url, method: 'GET' });
+		const items = mapArchivePayload(
+			response.json,
+			feed.feedId,
+			feed.canonicalHost,
+		);
 		return applyLimit(items, limit);
 	}
 
@@ -156,7 +170,7 @@ export class SubstackFeedSource implements FeedSource {
 
 		const url = `https://${parts.host}/api/v1/posts/${encodeURIComponent(parts.slug)}`;
 		try {
-			const response = await this.fetcher({ url, method: "GET" });
+			const response = await this.fetcher({ url, method: 'GET' });
 			const bodyHtml = readPostBodyHtml(response.json);
 			if (bodyHtml === null) {
 				return item;
@@ -164,7 +178,10 @@ export class SubstackFeedSource implements FeedSource {
 			// The archive list already reported the tier on the item; pass it
 			// through so a paid post whose fetched body is only a teaser still
 			// resolves to truncated.
-			return applyPaywallPass({ ...item, contentHtml: bodyHtml }, item.audience);
+			return applyPaywallPass(
+				{ ...item, contentHtml: bodyHtml },
+				item.audience,
+			);
 		} catch (err) {
 			console.error(err);
 			return item;

@@ -21,15 +21,21 @@ export interface StackedRow {
 // below for full-width controls. Use this for textareas, multi-control
 // composite rows (preview cards, folder plus tags forms), and anything else
 // that does not fit comfortably in Obsidian's Setting right-rail layout.
-export function createStackedRow(parent: HTMLElement, opts: StackedRowOpts): StackedRow {
+export function createStackedRow(
+	parent: HTMLElement,
+	opts: StackedRowOpts,
+): StackedRow {
 	const row = parent.createDiv({
-		cls: `rss-importer-stacked-row${opts.cls ? " " + opts.cls : ""}`,
+		cls: `rss-importer-stacked-row${opts.cls ? ' ' + opts.cls : ''}`,
 	});
-	const labels = row.createDiv({ cls: "rss-importer-stacked-labels" });
-	labels.createDiv({ cls: "rss-importer-stacked-name", text: opts.name });
+	const labels = row.createDiv({ cls: 'rss-importer-stacked-labels' });
+	labels.createDiv({ cls: 'rss-importer-stacked-name', text: opts.name });
 	if (opts.description) {
-		labels.createDiv({ cls: "rss-importer-stacked-desc", text: opts.description });
+		labels.createDiv({
+			cls: 'rss-importer-stacked-desc',
+			text: opts.description,
+		});
 	}
-	const content = row.createDiv({ cls: "rss-importer-stacked-content" });
+	const content = row.createDiv({ cls: 'rss-importer-stacked-content' });
 	return { row, content };
 }

@@ -12,13 +12,13 @@
  */
 
 /** Whether an item reads as an article (text body) or a podcast (audio enclosure). */
-export type FeedItemKind = "article" | "podcast";
+export type FeedItemKind = 'article' | 'podcast';
 
 /** Access tier for an item. `unknown` is the honest default for generic feeds. */
-export type FeedAudience = "free" | "paid" | "unknown";
+export type FeedAudience = 'free' | 'paid' | 'unknown';
 
 /** Which source implementation handles a feed. */
-export type SourceType = "substack" | "generic";
+export type SourceType = 'substack' | 'generic';
 
 /**
  * A single feed item, normalized across all sources.
@@ -144,11 +144,11 @@ export type HttpFetcher = (req: HttpRequest) => Promise<HttpResponse>;
  * reader and the writer. `feedItemId` is the dedup key.
  */
 export const FRONTMATTER_KEYS = {
-	feedSource: "feed-source",
-	feedItemId: "feed-item-id",
-	url: "url",
-	title: "title",
-	author: "author",
-	date: "date",
-	tags: "tags",
+	feedSource: 'feed-source',
+	feedItemId: 'feed-item-id',
+	url: 'url',
+	title: 'title',
+	author: 'author',
+	date: 'date',
+	tags: 'tags',
 } as const;

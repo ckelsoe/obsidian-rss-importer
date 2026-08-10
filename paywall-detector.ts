@@ -14,7 +14,7 @@
  * class names are far more durable than the words inside them.
  */
 
-import type { FeedAudience } from "./feed-source";
+import type { FeedAudience } from './feed-source';
 
 /** Input to the detector. `bodyHtml` is null before `fetchBody` has run. */
 export interface PaywallDetectInput {
@@ -52,7 +52,7 @@ interface PaywallSignal {
 	 * "wrapper": presence alone proves truncation.
 	 * "truncation": only proves truncation when the item is also paid.
 	 */
-	kind: "wrapper" | "truncation";
+	kind: 'wrapper' | 'truncation';
 }
 
 /**
@@ -62,19 +62,49 @@ interface PaywallSignal {
  * prose-based markers here.
  */
 const PAYWALL_SIGNALS: readonly PaywallSignal[] = [
-	{ name: "paywall-wrapper", classKeys: ["paywall"], kind: "wrapper" },
-	{ name: "subscribe-widget", classKeys: ["subscribe-widget"], kind: "wrapper" },
-	{ name: "subscription-widget", classKeys: ["subscription-widget"], kind: "wrapper" },
-	{ name: "gate-wrapper", classKeys: ["content-gate", "post-gate"], kind: "wrapper" },
-	{ name: "available-content", classKeys: ["available-content"], kind: "truncation" },
-	{ name: "truncated-content", classKeys: ["truncated-content", "post-truncated"], kind: "truncation" },
+	{ name: 'paywall-wrapper', classKeys: ['paywall'], kind: 'wrapper' },
+	{
+		name: 'subscribe-widget',
+		classKeys: ['subscribe-widget'],
+		kind: 'wrapper',
+	},
+	{
+		name: 'subscription-widget',
+		classKeys: ['subscription-widget'],
+		kind: 'wrapper',
+	},
+	{
+		name: 'gate-wrapper',
+		classKeys: ['content-gate', 'post-gate'],
+		kind: 'wrapper',
+	},
+	{
+		name: 'available-content',
+		classKeys: ['available-content'],
+		kind: 'truncation',
+	},
+	{
+		name: 'truncated-content',
+		classKeys: ['truncated-content', 'post-truncated'],
+		kind: 'truncation',
+	},
 ] as const;
 
 /** Source audience field tokens that indicate a paid-only item. */
-const PAID_TOKENS: readonly string[] = ["only_paid", "paid", "subscriber", "members"];
+const PAID_TOKENS: readonly string[] = [
+	'only_paid',
+	'paid',
+	'subscriber',
+	'members',
+];
 
 /** Source audience field tokens that indicate a free item. */
-const FREE_TOKENS: readonly string[] = ["everyone", "free", "only_free", "public"];
+const FREE_TOKENS: readonly string[] = [
+	'everyone',
+	'free',
+	'only_free',
+	'public',
+];
 
 /**
  * Resolve the access tier from the source-reported audience field. Returns
@@ -82,21 +112,23 @@ const FREE_TOKENS: readonly string[] = ["everyone", "free", "only_free", "public
  * tokens win over free tokens if a field somehow matches both, because a paid
  * gate is the more consequential classification to surface.
  */
-function resolveAudience(audienceField: string | null | undefined): FeedAudience {
+function resolveAudience(
+	audienceField: string | null | undefined,
+): FeedAudience {
 	if (audienceField === null || audienceField === undefined) {
-		return "unknown";
+		return 'unknown';
 	}
 	const normalized = audienceField.trim().toLowerCase();
 	if (normalized.length === 0) {
-		return "unknown";
+		return 'unknown';
 	}
 	if (PAID_TOKENS.some((token) => normalized.includes(token))) {
-		return "paid";
+		return 'paid';
 	}
 	if (FREE_TOKENS.some((token) => normalized.includes(token))) {
-		return "free";
+		return 'free';
 	}
-	return "unknown";
+	return 'unknown';
 }
 
 /**
@@ -106,20 +138,16 @@ function resolveAudience(audienceField: string | null | undefined): FeedAudience
  */
 function collectClassText(doc: Document): string {
 	const parts: string[] = [];
-	const all = doc.querySelectorAll("*");
-	for (let i = 0; i < all.length; i += 1) {
-		const el = all.item(i);
-		if (el === null) {
-			continue;
-		}
+	const all = doc.querySelectorAll('*');
+	all.forEach((el) => {
 		// `getAttribute("class")` returns the raw string for both HTML and SVG
 		// elements, avoiding the SVGAnimatedString shape of `el.className`.
-		const cls = el.getAttribute("class");
+		const cls = el.getAttribute('class');
 		if (cls !== null && cls.length > 0) {
 			parts.push(cls.toLowerCase());
 		}
-	}
-	return parts.join(" ");
+	});
+	return parts.join(' ');
 }
 
 /**
@@ -131,8 +159,7 @@ function collectClassText(doc: Document): string {
 const TRUNCATION_TEXT_THRESHOLD = 800;
 
 function looksShort(doc: Document): boolean {
-	const body = doc.body;
-	const text = body === null ? "" : (body.textContent ?? "");
+	const text = doc.body?.textContent ?? '';
 	return text.trim().length < TRUNCATION_TEXT_THRESHOLD;
 }
 
@@ -156,14 +183,14 @@ export function detectPaywall(input: PaywallDetectInput): PaywallDetectResult {
 		// No body to inspect. For a paid item with no fetched body we still flag
 		// truncation, because a paid item we could not fully fetch is, by
 		// definition, not a complete post in hand.
-		const isTruncated = audience === "paid";
+		const isTruncated = audience === 'paid';
 		if (isTruncated) {
-			signals.push("paid-no-body");
+			signals.push('paid-no-body');
 		}
 		return { isTruncated, audience, signals };
 	}
 
-	const doc = new DOMParser().parseFromString(html, "text/html");
+	const doc = new DOMParser().parseFromString(html, 'text/html');
 	const classText = collectClassText(doc);
 
 	let hasWrapper = false;
@@ -174,7 +201,7 @@ export function detectPaywall(input: PaywallDetectInput): PaywallDetectResult {
 			continue;
 		}
 		signals.push(signal.name);
-		if (signal.kind === "wrapper") {
+		if (signal.kind === 'wrapper') {
 			hasWrapper = true;
 		} else {
 			hasTruncationMarker = true;
@@ -182,12 +209,12 @@ export function detectPaywall(input: PaywallDetectInput): PaywallDetectResult {
 	}
 
 	let isTruncated = hasWrapper;
-	if (audience === "paid") {
+	if (audience === 'paid') {
 		if (hasTruncationMarker) {
 			isTruncated = true;
 		} else if (looksShort(doc)) {
 			isTruncated = true;
-			signals.push("paid-short-body");
+			signals.push('paid-short-body');
 		}
 	}
 

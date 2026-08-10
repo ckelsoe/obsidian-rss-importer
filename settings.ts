@@ -7,13 +7,13 @@
  * because dismissed items have no note to carry the state.
  */
 
-import type { SourceType } from "./feed-source";
-import type { DismissedMap } from "./dismiss-store";
-import type { TagDestination } from "./note-writer";
-import type { CleanupConfig } from "./cleanup";
+import type { SourceType } from './feed-source';
+import type { DismissedMap } from './dismiss-store';
+import type { TagDestination } from './note-writer';
+import type { CleanupConfig } from './cleanup';
 
-export type ImagesMode = "link" | "download";
-export type DuplicatePolicy = "skip" | "overwrite" | "prompt";
+export type ImagesMode = 'link' | 'download';
+export type DuplicatePolicy = 'skip' | 'overwrite' | 'prompt';
 
 /**
  * Where downloaded media (podcast audio/video enclosures) is written. "vault"
@@ -21,7 +21,7 @@ export type DuplicatePolicy = "skip" | "overwrite" | "prompt";
  * an absolute filesystem path (desktop only) so large media stays out of the
  * synced vault.
  */
-export type MediaLocation = "vault" | "outside";
+export type MediaLocation = 'vault' | 'outside';
 
 /** A configured feed and the resolved metadata captured when it was added. */
 export interface FeedConfig {
@@ -98,22 +98,22 @@ export interface RssImporterSettings {
 
 export const DEFAULT_SETTINGS: RssImporterSettings = {
 	feeds: [],
-	defaultParentFolder: "Feeds",
-	noteNameTemplate: "{{date}} {{title}}",
-	duplicatePolicy: "skip",
+	defaultParentFolder: 'Feeds',
+	noteNameTemplate: '{{date}} {{title}}',
+	duplicatePolicy: 'skip',
 	requestDelayMs: 1200,
-	imagesMode: "link",
-	imageSubfolder: "images",
+	imagesMode: 'link',
+	imageSubfolder: 'images',
 	downloadMedia: false,
-	mediaLocation: "vault",
-	mediaSubfolder: "media",
-	mediaOutsideFolder: "",
-	tagDestination: "feed-tags",
+	mediaLocation: 'vault',
+	mediaSubfolder: 'media',
+	mediaOutsideFolder: '',
+	tagDestination: 'feed-tags',
 	cleanupLinkHosts: [],
 	cleanupTrimAfterLastRule: false,
 	debug: false,
 	showRibbonIcon: true,
-	ribbonIcon: "rss",
+	ribbonIcon: 'rss',
 	dismissed: {},
 };
 
@@ -122,42 +122,66 @@ export const REQUEST_DELAY_MIN = 500;
 export const REQUEST_DELAY_MAX = 5000;
 
 /** Resolves the effective images mode for a feed (per-feed override or default). */
-export function effectiveImagesMode(feed: FeedConfig, settings: RssImporterSettings): ImagesMode {
+export function effectiveImagesMode(
+	feed: FeedConfig,
+	settings: RssImporterSettings,
+): ImagesMode {
 	return feed.imagesMode ?? settings.imagesMode;
 }
 
 /** Resolves the effective note-name template for a feed. */
-export function effectiveNoteNameTemplate(feed: FeedConfig, settings: RssImporterSettings): string {
+export function effectiveNoteNameTemplate(
+	feed: FeedConfig,
+	settings: RssImporterSettings,
+): string {
 	return feed.noteNameTemplate ?? settings.noteNameTemplate;
 }
 
 /** Resolves the effective image subfolder name for a feed. */
-export function effectiveImageSubfolder(feed: FeedConfig, settings: RssImporterSettings): string {
+export function effectiveImageSubfolder(
+	feed: FeedConfig,
+	settings: RssImporterSettings,
+): string {
 	return feed.imageSubfolder ?? settings.imageSubfolder;
 }
 
 /** Resolves whether media is downloaded for a feed (per-feed override or default). */
-export function effectiveDownloadMedia(feed: FeedConfig, settings: RssImporterSettings): boolean {
+export function effectiveDownloadMedia(
+	feed: FeedConfig,
+	settings: RssImporterSettings,
+): boolean {
 	return feed.downloadMedia ?? settings.downloadMedia;
 }
 
 /** Resolves the effective media location for a feed. */
-export function effectiveMediaLocation(feed: FeedConfig, settings: RssImporterSettings): MediaLocation {
+export function effectiveMediaLocation(
+	feed: FeedConfig,
+	settings: RssImporterSettings,
+): MediaLocation {
 	return feed.mediaLocation ?? settings.mediaLocation;
 }
 
 /** Resolves the effective media subfolder name for a feed. */
-export function effectiveMediaSubfolder(feed: FeedConfig, settings: RssImporterSettings): string {
+export function effectiveMediaSubfolder(
+	feed: FeedConfig,
+	settings: RssImporterSettings,
+): string {
 	return feed.mediaSubfolder ?? settings.mediaSubfolder;
 }
 
 /** Resolves the effective outside (absolute) media folder for a feed. */
-export function effectiveMediaOutsideFolder(feed: FeedConfig, settings: RssImporterSettings): string {
+export function effectiveMediaOutsideFolder(
+	feed: FeedConfig,
+	settings: RssImporterSettings,
+): string {
 	return feed.mediaOutsideFolder ?? settings.mediaOutsideFolder;
 }
 
 /** Resolves the effective cleanup promo-host list for a feed (override or default). */
-export function effectiveCleanupLinkHosts(feed: FeedConfig, settings: RssImporterSettings): string[] {
+export function effectiveCleanupLinkHosts(
+	feed: FeedConfig,
+	settings: RssImporterSettings,
+): string[] {
 	return feed.cleanupLinkHosts ?? settings.cleanupLinkHosts;
 }
 
@@ -170,7 +194,10 @@ export function effectiveCleanupTrimAfterLastRule(
 }
 
 /** Build the concrete CleanupConfig for a feed from its effective settings. */
-export function buildCleanupConfig(feed: FeedConfig, settings: RssImporterSettings): CleanupConfig {
+export function buildCleanupConfig(
+	feed: FeedConfig,
+	settings: RssImporterSettings,
+): CleanupConfig {
 	return {
 		linkHosts: effectiveCleanupLinkHosts(feed, settings),
 		trimAfterLastRule: effectiveCleanupTrimAfterLastRule(feed, settings),

@@ -19,15 +19,15 @@
 // imports `obsidian`, never touches the DOM, and is fully unit-testable with
 // plain-object stubs for the source, note writer, and converter.
 
-import type { FeedItem } from "./feed-source";
-import type { NoteWriter } from "./note-writer";
-import { NoteWriterCancelledError } from "./note-writer";
-import type { DebugLogger } from "./debug-logger";
+import type { FeedItem } from './feed-source';
+import type { NoteWriter } from './note-writer';
+import { NoteWriterCancelledError } from './note-writer';
+import type { DebugLogger } from './debug-logger';
 
 /** Outcome of importing a single feed item. */
 export interface ImportItemResult {
 	item: FeedItem;
-	status: "created" | "overwritten" | "skipped" | "failed";
+	status: 'created' | 'overwritten' | 'skipped' | 'failed';
 	/** Vault-relative path written, or null when the item failed before a write. */
 	path: string | null;
 	/** Failure reason when status is 'failed', else null. */
@@ -141,7 +141,7 @@ export class ImportRunner {
 			// requested mid-run stops cleanly without starting the next fetch.
 			if (opts.isAborted?.() === true) {
 				this.debug?.log({
-					kind: "note",
+					kind: 'note',
 					message: `Import aborted before item ${index + 1} of ${items.length}`,
 				});
 				break;
@@ -189,7 +189,7 @@ export class ImportRunner {
 			const full = await this.source.fetchBody(item);
 			reported = full;
 
-			const html = full.contentHtml ?? "";
+			const html = full.contentHtml ?? '';
 			let markdown = this.convert(html);
 
 			if (this.processImages !== undefined) {
@@ -200,7 +200,7 @@ export class ImportRunner {
 					// Keep the converted markdown as-is and log the detail.
 					console.error(err);
 					this.debug?.log({
-						kind: "error",
+						kind: 'error',
 						message: `Image processing failed for "${full.title}", keeping converted text`,
 						payload: describeError(err),
 					});
@@ -216,7 +216,7 @@ export class ImportRunner {
 				} catch (err) {
 					console.error(err);
 					this.debug?.log({
-						kind: "error",
+						kind: 'error',
 						message: `Cleanup failed for "${full.title}", keeping the uncleaned text`,
 						payload: describeError(err),
 					});
@@ -228,7 +228,7 @@ export class ImportRunner {
 			// traceable to a content-less feed rather than a conversion bug.
 			if (markdown.trim().length === 0) {
 				this.debug?.log({
-					kind: "note",
+					kind: 'note',
 					message: `Imported "${full.title}" with an empty body (feed provided no content)`,
 					endpoint: full.url,
 				});
@@ -238,7 +238,11 @@ export class ImportRunner {
 			// log, and write the note without a local file (the remote media-url
 			// stays in frontmatter and as the body link).
 			let mediaFile: string | undefined;
-			if (this.downloadMedia !== undefined && full.mediaUrl !== null && full.mediaUrl.length > 0) {
+			if (
+				this.downloadMedia !== undefined &&
+				full.mediaUrl !== null &&
+				full.mediaUrl.length > 0
+			) {
 				try {
 					const local = await this.downloadMedia(full);
 					if (local !== null) {
@@ -247,7 +251,7 @@ export class ImportRunner {
 				} catch (err) {
 					console.error(err);
 					this.debug?.log({
-						kind: "error",
+						kind: 'error',
 						message: `Media download failed for "${full.title}", keeping the remote link`,
 						payload: describeError(err),
 					});
@@ -259,7 +263,7 @@ export class ImportRunner {
 				mediaFile,
 			});
 			this.debug?.log({
-				kind: "note",
+				kind: 'note',
 				message: `${outcome.status} ${outcome.path}`,
 				endpoint: full.url,
 			});
@@ -278,13 +282,13 @@ export class ImportRunner {
 			const reason = describeError(err);
 			console.error(err);
 			this.debug?.log({
-				kind: "error",
+				kind: 'error',
 				message: `Failed to import "${reported.title}": ${reason}`,
 				endpoint: reported.url,
 			});
 			return {
 				item: reported,
-				status: "failed",
+				status: 'failed',
 				path: null,
 				reason,
 			};
@@ -294,19 +298,19 @@ export class ImportRunner {
 	/** Bump the matching counter for a recorded item status. */
 	private recordStatus(
 		tally: ImportTally,
-		status: ImportItemResult["status"],
+		status: ImportItemResult['status'],
 	): void {
 		switch (status) {
-			case "created":
+			case 'created':
 				tally.created++;
 				break;
-			case "overwritten":
+			case 'overwritten':
 				tally.overwritten++;
 				break;
-			case "skipped":
+			case 'skipped':
 				tally.skipped++;
 				break;
-			case "failed":
+			case 'failed':
 				tally.failed++;
 				break;
 		}

@@ -29,7 +29,7 @@
  * free-form developer marker the plugin can use to annotate the timeline
  * ("user clicked import", "modal closed").
  */
-export type DebugEventKind = "request" | "response" | "parsed" | "error" | "note";
+type DebugEventKind = 'request' | 'response' | 'parsed' | 'error' | 'note';
 
 /**
  * Shape of an event as logged by a caller. The timestamp is filled in by
@@ -149,7 +149,7 @@ export class BufferedDebugLogger implements DebugLogger {
 			this.buffer.shift();
 		}
 		// Mirror to DevTools so the user can watch events stream live.
-		const endpointPart = event.endpoint ? ` ${event.endpoint}` : "";
+		const endpointPart = event.endpoint ? ` ${event.endpoint}` : '';
 		const prefix = `[RSS debug] ${event.kind}${endpointPart}: ${event.message}`;
 		this.consoleSink(prefix, event.payload);
 	}
@@ -177,14 +177,14 @@ export class BufferedDebugLogger implements DebugLogger {
 	format(): string {
 		const snap = this.snapshot();
 		const header = [
-			"=== RSS Importer debug session ===",
+			'=== RSS Importer debug session ===',
 			`Generated: ${this.now().toISOString()}`,
 			`Events: ${snap.length}`,
 			...this.headerLines,
-			"Authorization headers are never captured. Payloads may contain",
-			"feed titles, article text, and item metadata.",
-			"",
-		].join("\n");
+			'Authorization headers are never captured. Payloads may contain',
+			'feed titles, article text, and item metadata.',
+			'',
+		].join('\n');
 		if (snap.length === 0) {
 			return `${header}(buffer is empty)\n=== End debug session ===\n`;
 		}
@@ -192,18 +192,18 @@ export class BufferedDebugLogger implements DebugLogger {
 			const n = index + 1;
 			const ts = event.timestamp.toISOString();
 			const kind = event.kind.toUpperCase();
-			const endpointPart = event.endpoint ? ` ${event.endpoint}` : "";
+			const endpointPart = event.endpoint ? ` ${event.endpoint}` : '';
 			const headerLine = `[${n}] ${ts} ${kind}${endpointPart}: ${event.message}`;
 			if (event.payload === undefined) {
 				return headerLine;
 			}
 			let payloadText: string;
 			try {
-				const json = JSON.stringify(event.payload, null, 2);
+				// JSON.stringify is typed to return string, but returns undefined
+				// for undefined/function/symbol input; `??` handles that.
 				payloadText =
-					json === undefined
-						? `(non-serializable: ${describeNonString(event.payload)})`
-						: json;
+					JSON.stringify(event.payload, null, 2) ??
+					`(non-serializable: ${describeNonString(event.payload)})`;
 			} catch (err) {
 				// Surface the original failure detail rather than swallowing it.
 				payloadText = `(non-serializable: ${
@@ -212,7 +212,7 @@ export class BufferedDebugLogger implements DebugLogger {
 			}
 			return `${headerLine}\n${payloadText}`;
 		});
-		return `${header}${blocks.join("\n\n")}\n\n=== End debug session ===\n`;
+		return `${header}${blocks.join('\n\n')}\n\n=== End debug session ===\n`;
 	}
 }
 
@@ -221,20 +221,27 @@ export class BufferedDebugLogger implements DebugLogger {
 // object produces the literal "[object Object]" which is useless;
 // constructor names plus JSON.stringify is more informative.
 function describeNonString(value: unknown): string {
-	if (value === null) return "null";
-	if (value === undefined) return "undefined";
-	if (typeof value === "string") return value;
-	if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+	if (value === null) return 'null';
+	if (value === undefined) return 'undefined';
+	if (typeof value === 'string') return value;
+	if (
+		typeof value === 'number' ||
+		typeof value === 'boolean' ||
+		typeof value === 'bigint'
+	) {
 		return String(value);
 	}
 	try {
 		const json = JSON.stringify(value);
-		if (json !== undefined) return json;
+		// JSON.stringify returns undefined for non-serializable input despite its
+		// string return type; a typeof guard both narrows and reads honestly.
+		if (typeof json === 'string') return json;
 	} catch {
 		// Fall through to the constructor-name fallback below.
 	}
-	const ctor = (value as { constructor?: { name?: string } } | null)?.constructor?.name;
-	return ctor ? `[object ${ctor}]` : "unknown value";
+	const ctor = (value as { constructor?: { name?: string } } | null)
+		?.constructor?.name;
+	return ctor ? `[object ${ctor}]` : 'unknown value';
 }
 
 /**
@@ -263,6 +270,6 @@ export class NoopDebugLogger implements DebugLogger {
 		// Deliberate no-op.
 	}
 	format(): string {
-		return "";
+		return '';
 	}
 }
