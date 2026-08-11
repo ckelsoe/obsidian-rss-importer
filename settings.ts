@@ -63,6 +63,37 @@ export interface FeedConfig {
 	cleanupTrimAfterLastRule?: boolean;
 }
 
+/**
+ * True when a stored value is a usable FeedConfig. data.json is user-editable,
+ * so a feed from a corrupt or hand-edited file can be null, a primitive, or
+ * missing required fields; loadSettings drops the ones that fail this so a bad
+ * entry cannot throw later (an `in` check on null, `publicationTitle.length`,
+ * `destinationFolder.trim()`).
+ */
+export function isValidFeedConfig(value: unknown): value is FeedConfig {
+	if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+		return false;
+	}
+	const f = value as Record<string, unknown>;
+	return (
+		typeof f['feedId'] === 'string' &&
+		(f['sourceType'] === 'substack' || f['sourceType'] === 'generic') &&
+		typeof f['feedUrl'] === 'string' &&
+		typeof f['canonicalHost'] === 'string' &&
+		typeof f['publicationTitle'] === 'string' &&
+		(typeof f['author'] === 'string' || f['author'] === null) &&
+		typeof f['destinationFolder'] === 'string' &&
+		Array.isArray(f['tags']) &&
+		f['tags'].every((t: unknown) => typeof t === 'string') &&
+		typeof f['tagNamespace'] === 'string' &&
+		typeof f['importSourceTags'] === 'boolean' &&
+		typeof f['enabled'] === 'boolean' &&
+		typeof f['addedAt'] === 'string' &&
+		(typeof f['lastImportedAt'] === 'string' ||
+			f['lastImportedAt'] === null)
+	);
+}
+
 export interface RssImporterSettings {
 	feeds: FeedConfig[];
 	// Global defaults (the "Defaults" settings area).
