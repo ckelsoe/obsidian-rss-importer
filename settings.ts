@@ -81,9 +81,16 @@ export function isValidFeedConfig(value: unknown): value is FeedConfig {
 		typeof f['feedUrl'] === 'string' &&
 		typeof f['canonicalHost'] === 'string' &&
 		typeof f['publicationTitle'] === 'string' &&
+		(typeof f['author'] === 'string' || f['author'] === null) &&
 		typeof f['destinationFolder'] === 'string' &&
 		Array.isArray(f['tags']) &&
-		typeof f['enabled'] === 'boolean'
+		f['tags'].every((t: unknown) => typeof t === 'string') &&
+		typeof f['tagNamespace'] === 'string' &&
+		typeof f['importSourceTags'] === 'boolean' &&
+		typeof f['enabled'] === 'boolean' &&
+		typeof f['addedAt'] === 'string' &&
+		(typeof f['lastImportedAt'] === 'string' ||
+			f['lastImportedAt'] === null)
 	);
 }
 

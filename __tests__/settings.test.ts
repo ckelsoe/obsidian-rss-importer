@@ -56,17 +56,40 @@ describe('isValidFeedConfig', () => {
 		).toBe(false);
 	});
 
+	it('accepts a null author and a null lastImportedAt', () => {
+		expect(
+			isValidFeedConfig({
+				...makeFeed(),
+				author: null,
+				lastImportedAt: null,
+			}),
+		).toBe(true);
+	});
+
 	it('rejects wrong-typed required fields', () => {
 		expect(isValidFeedConfig({ ...makeFeed(), destinationFolder: 5 })).toBe(
 			false,
 		);
 		expect(isValidFeedConfig({ ...makeFeed(), tags: 'x' })).toBe(false);
+		expect(isValidFeedConfig({ ...makeFeed(), tags: ['ok', 5] })).toBe(
+			false,
+		);
 		expect(isValidFeedConfig({ ...makeFeed(), enabled: 'yes' })).toBe(
 			false,
 		);
 		expect(isValidFeedConfig({ ...makeFeed(), sourceType: 'bogus' })).toBe(
 			false,
 		);
+		expect(isValidFeedConfig({ ...makeFeed(), tagNamespace: 3 })).toBe(
+			false,
+		);
+		expect(
+			isValidFeedConfig({ ...makeFeed(), importSourceTags: 'no' }),
+		).toBe(false);
+		expect(isValidFeedConfig({ ...makeFeed(), addedAt: undefined })).toBe(
+			false,
+		);
+		expect(isValidFeedConfig({ ...makeFeed(), author: 5 })).toBe(false);
 	});
 });
 
