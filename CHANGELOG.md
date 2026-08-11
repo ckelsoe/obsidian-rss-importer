@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-08-11
+
 ### Fixed
 
 - A corrupt or hand-edited `data.json` no longer stops the plugin from loading. Feed entries that are not usable (missing required fields or wrong types) are dropped on load instead of throwing during startup.
