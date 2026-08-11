@@ -8,59 +8,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+
 - A corrupt or hand-edited `data.json` no longer stops the plugin from loading. Feed entries that are not usable (missing required fields or wrong types) are dropped on load instead of throwing during startup.
+- The marketplace scorecard no longer flags the plugin's use of `String.matchAll`, `String.trimStart`/`trimEnd` as untyped. The declared TypeScript `lib` stopped at ES2018 while the code uses these ES2019/ES2020 methods, so the developer-dashboard scan, which type-checks without the plugin's development dependencies, saw them as `any` and reported no-unsafe warnings. The `lib` now includes ES2019 and ES2020, and a `tsconfig.scan.json` guard wired into `npm run lint` reproduces the scan's stricter view so the gap cannot recur. No runtime change: these methods already run on every supported Obsidian version.
 
 ## [1.0.0] - 2026-06-15
 
 First stable release. The free and public-content importer is feature-complete: multi-source feeds (Substack and generic RSS/podcast), per-feed destination and dedup, the import window with dismiss, endless scroll, select-all and counts, HTML to Markdown conversion, image and media download, Substack archive backfill, and deterministic cleanup rules. Importing full bodies of paid Substack posts is planned for a later release.
 
 ### Added
+
 - Endless scroll in the import window: older Substack archive items now load automatically as you scroll toward the bottom of the list, instead of clicking "Load older" each time. The button stays as a fallback and as the "No older items" end-of-archive indicator. Generic RSS and podcast feeds still expose only their recent window, since they have no archive to page.
 - A "Select all" toggle above the item list that checks every available item currently loaded (skipping items already imported or dismissed), and flips to "Deselect all" once all are selected. With endless scroll, load more items and click again to extend the selection.
 - Item counts in the import window toolbar: a running loaded count on the left that grows as older items page in and reads "All N items" once the archive is exhausted, and an "x of y selected" count on the right showing how many of the available items are selected.
 - A "Re-detect" button on each feed's editor page that re-resolves the feed and updates its source type in place, so a custom-domain Substack saved as a generic feed can be upgraded to gain archive backfill without removing and re-adding it (folder, tags, and dismissals are kept).
 
 ### Fixed
+
 - Custom-domain Substack publications (for example a Substack served from its own domain) added by their domain are now detected as Substack via the feed's generator marker, so they get archive backfill and endless scroll instead of being limited to the recent window. Previously only Substacks added by `@handle` or a `*.substack.com` address got archive access.
 
 ## [0.4.0] - 2026-06-14
 
 ### Added
+
 - Per-feed cleanup rules that strip promotional clutter from note bodies, matched by link target and structure rather than by wording (so they keep working when the text changes). Each feed can list link hosts (for example `buymeacoffee.com`, `substack.com/app`, `/subscribe`) whose short call-to-action or footer blocks are removed, plus an optional "trim after the last horizontal rule" to drop a trailing footer region. A long paragraph that merely cites one of those links is preserved. Rules apply during import and through a new "Clean up imported notes" command that re-cleans a feed's existing notes (frontmatter left untouched).
 
 ## [0.3.0] - 2026-06-14
 
 ### Added
+
 - Substack archive backfill: a "Load older" button in the import window pages back through a publication's archive beyond the recent RSS window (roughly the latest 20 items), so you can reach much older posts. Each older post's body is fetched on demand. Generic RSS and podcast feeds expose only their recent window, so the control appears for Substack feeds only.
 
 ## [0.2.0] - 2026-06-14
 
 ### Added
+
 - Per-feed media download: save podcast audio and video enclosures into a vault subfolder, or to a folder outside the vault (desktop only) for large media you do not want syncing. Global defaults plus per-feed overrides. Notes record a `media-file` property and link to the local file.
 
 ### Changed
+
 - Feed tags now write to a `feed-tags` note property by default instead of the global Obsidian `tags`, so they no longer flood the tag pane, search, and graph. A "Tag destination" setting switches back to Obsidian tags. A leading `#` is stripped from tags.
 
 ### Fixed
+
 - Imported items show the imported badge immediately after an import, instead of only after closing and reopening the import window.
 - The import result summary is a one-line count plus any failures, instead of listing every item (which overflowed the window).
 
 ## [0.1.2] - 2026-06-14
 
 ### Fixed
+
 - In the import window, dismissing or undismissing an item (and the refresh after an import) no longer clears the other items you had checked. Selection is preserved across re-renders.
 
 ### Changed
+
 - The Markdown converter now strips Substack's email-truncation and "read in the app" notices, subscribe forms, CTA buttons, and related-post embeds, matched by Substack's structural component markers (never by body text). Images, captions, and article prose are kept. Author-written prose (including a hand-typed support paragraph) is left untouched.
 
 ## [0.1.1] - 2026-06-14
 
 ### Fixed
+
 - Plugin failed to load on enable. The settings tab declared a getter-only `plugin` accessor, which collided with the base class assigning `this.plugin` during construction, so the plugin was disabled before any commands or UI registered. The settings tab now uses a plain typed field.
 - The Add feed dialog's Save button did nothing. It mixed two ways of toggling the disabled state and required a separate Resolve click first. Save now resolves the feed on demand and saves it, and is never stuck disabled.
 - A failure during load now shows a Notice instead of failing silently, so a future load error is visible without opening the developer console.
 
 ### Added
+
 - Initial release: import articles and podcasts from RSS, Atom, and Substack feeds into the vault as Markdown notes.
 - Multi-source support behind one feed contract. Substack publications are first-class: add a `@handle`, subdomain, custom domain, or post URL and the plugin resolves it to the feed. Any other RSS, Atom, or podcast feed imports as a generic source.
 - One destination folder per feed, with recursive deduplication by a stable `feed-item-id` stored in each note's frontmatter, so moving or renaming notes never causes a re-import.
