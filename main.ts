@@ -25,6 +25,7 @@ import {
 	effectiveMediaOutsideFolder,
 	effectiveMediaSubfolder,
 	effectiveNoteNameTemplate,
+	isValidFeedConfig,
 	type DuplicatePolicy,
 	type FeedConfig,
 	type ImagesMode,
@@ -244,9 +245,13 @@ export default class RssImporterPlugin
 		if (typeof dismissed !== 'object' || dismissed === null) {
 			this.settings.dismissed = {};
 		}
-		if (!Array.isArray(this.settings.feeds)) {
-			this.settings.feeds = [];
-		}
+		// data.json is user-editable: drop feeds that are null, a primitive, or
+		// missing required fields so the per-feed loop below and later field
+		// access cannot throw.
+		const rawFeeds: unknown = this.settings.feeds;
+		this.settings.feeds = Array.isArray(rawFeeds)
+			? rawFeeds.filter(isValidFeedConfig)
+			: [];
 
 		// Coerce the literal-union fields. data.json is user-editable, so a stored
 		// value can be a missing or invalid literal; fall back to the default for

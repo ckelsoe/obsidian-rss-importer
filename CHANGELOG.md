@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- A corrupt or hand-edited `data.json` no longer stops the plugin from loading. Feed entries that are not usable (missing required fields or wrong types) are dropped on load instead of throwing during startup.
+
 ## [1.0.0] - 2026-06-15
 
 First stable release. The free and public-content importer is feature-complete: multi-source feeds (Substack and generic RSS/podcast), per-feed destination and dedup, the import window with dismiss, endless scroll, select-all and counts, HTML to Markdown conversion, image and media download, Substack archive backfill, and deterministic cleanup rules. Importing full bodies of paid Substack posts is planned for a later release.

@@ -4,6 +4,7 @@ import {
 	cleanupHasRules,
 	effectiveCleanupLinkHosts,
 	effectiveCleanupTrimAfterLastRule,
+	isValidFeedConfig,
 	type FeedConfig,
 	type RssImporterSettings,
 } from '../settings';
@@ -32,6 +33,42 @@ function makeSettings(
 ): RssImporterSettings {
 	return { ...DEFAULT_SETTINGS, ...overrides };
 }
+
+describe('isValidFeedConfig', () => {
+	it('accepts a complete feed', () => {
+		expect(isValidFeedConfig(makeFeed())).toBe(true);
+	});
+
+	it('rejects null, undefined, and primitives', () => {
+		expect(isValidFeedConfig(null)).toBe(false);
+		expect(isValidFeedConfig(undefined)).toBe(false);
+		expect(isValidFeedConfig(42)).toBe(false);
+		expect(isValidFeedConfig('feed')).toBe(false);
+	});
+
+	it('rejects an array', () => {
+		expect(isValidFeedConfig([makeFeed()])).toBe(false);
+	});
+
+	it('rejects a feed missing a required field', () => {
+		expect(
+			isValidFeedConfig({ ...makeFeed(), publicationTitle: undefined }),
+		).toBe(false);
+	});
+
+	it('rejects wrong-typed required fields', () => {
+		expect(isValidFeedConfig({ ...makeFeed(), destinationFolder: 5 })).toBe(
+			false,
+		);
+		expect(isValidFeedConfig({ ...makeFeed(), tags: 'x' })).toBe(false);
+		expect(isValidFeedConfig({ ...makeFeed(), enabled: 'yes' })).toBe(
+			false,
+		);
+		expect(isValidFeedConfig({ ...makeFeed(), sourceType: 'bogus' })).toBe(
+			false,
+		);
+	});
+});
 
 describe('effectiveCleanupLinkHosts', () => {
 	it('returns the global default when the feed has no override', () => {
