@@ -19,3 +19,8 @@ reason = "braces: stack exhaustion on deeply nested patterns. No fixed release e
 id = "GHSA-hp3w-g68c-fv3c"
 ignoreUntil = 2026-12-31
 reason = "sprintf-js: denial of service through unbounded precision specifiers. No fixed release exists (every version through 1.1.3, the latest, is affected). Dev-only: reached through ts-jest > babel-plugin-istanbul > @istanbuljs/load-nyc-config > js-yaml 3 > argparse 1, which runs only while jest loads its coverage config and never ships in main.js. Drop this entry when sprintf-js publishes a fix or the path leaves the tree."
+
+[[IgnoredVulns]]
+id = "GHSA-gcqx-w48m-w2h4"
+ignoreUntil = 2026-12-31
+reason = "deepmerge: prototype poisoning of objects returned by mergeObject(). No fixed release exists (4.3.1 is the latest and is affected). Dev-only: reached through jest > @jest/core > jest-config, which merges this repo's own test config and never ships in main.js. Drop this entry, and add a package.json override, as soon as deepmerge publishes a fixed version."
