@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The Media location, Media subfolder and Media folder outside vault defaults show only while some feed downloads media. Media subfolder shows only for media saved in the vault, and Media folder outside vault only for media saved outside it, on desktop. A feed that turns media downloads on for itself counts, so its defaults stay reachable.
+
+### Fixed
+
+- The add-feed preview no longer treats a URL as Substack because `substack.com` appears in its path or query string. It reads the handle and the host, the same way the import does.
+
 ## [1.0.1] - 2026-08-11
 
 ### Fixed

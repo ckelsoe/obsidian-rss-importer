@@ -1,6 +1,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { FeedResolver, ResolveError } from '../feed-resolver';
+import {
+	classifyInputSourceType,
+	FeedResolver,
+	ResolveError,
+} from '../feed-resolver';
 import type { HttpFetcher, HttpRequest, HttpResponse } from '../feed-source';
 
 /** A canned response, addressed by exact request URL. */
@@ -473,5 +477,30 @@ describe('FeedResolver: input validation and classification', () => {
 			expect(err).toBeInstanceOf(ResolveError);
 			expect((err as ResolveError).cause).toBe(boom);
 		}
+	});
+});
+
+describe('classifyInputSourceType', () => {
+	it.each([
+		'@writer',
+		'substack.com/@writer',
+		'https://substack.com/@writer',
+		'https://www.substack.com/@writer',
+		'writer.substack.com',
+		'https://writer.substack.com/p/a-post',
+		'HTTPS://Writer.Substack.com',
+	])('treats %s as Substack', (input) => {
+		expect(classifyInputSourceType(input)).toBe('substack');
+	});
+
+	it.each([
+		'https://example.com/feed',
+		'https://example.com/?ref=writer.substack.com',
+		'https://example.com/?ref=writer.substack.com/@writer',
+		'https://example.com/writer.substack.com/feed',
+		'https://writer.substack.com.example.com/feed',
+		'not a url at all',
+	])('treats %s as generic', (input) => {
+		expect(classifyInputSourceType(input)).toBe('generic');
 	});
 });

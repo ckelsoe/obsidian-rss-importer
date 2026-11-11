@@ -12,8 +12,8 @@ import type {
 	HttpFetcher,
 	HttpRequest,
 	HttpResponse,
-	SourceType,
 } from './feed-source';
+import { classifyInputSourceType } from './feed-resolver';
 import {
 	DEFAULT_SETTINGS,
 	buildCleanupConfig,
@@ -140,23 +140,6 @@ function coerceStringArray(value: unknown, fallback: string[]): string[] {
 		);
 	}
 	return [...fallback];
-}
-
-// Sync classification used only to pick which source resolves a freshly entered
-// input for the add-feed preview. The resolved feed's own sourceType (captured
-// into the FeedConfig) is what drives import, so a custom-domain Substack that
-// falls through to "generic" here still imports its free posts correctly.
-function classifyInputSourceType(input: string): SourceType {
-	const trimmed = input.trim().toLowerCase();
-	if (
-		trimmed.startsWith('@') ||
-		trimmed.includes('substack.com/@') ||
-		/(^|\/\/|\.)substack\.com(\/|$)/.test(trimmed) ||
-		trimmed.includes('.substack.com')
-	) {
-		return 'substack';
-	}
-	return 'generic';
 }
 
 export default class RssImporterPlugin

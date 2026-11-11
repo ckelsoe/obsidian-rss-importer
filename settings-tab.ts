@@ -11,6 +11,7 @@ import {
 	App,
 	type ButtonComponent,
 	Notice,
+	Platform,
 	PluginSettingTab,
 	Setting,
 	SettingPage,
@@ -18,7 +19,11 @@ import {
 	type SettingDefinitionItem,
 } from 'obsidian';
 import type { FeedSource, SourceType } from './feed-source';
-import type { FeedConfig, RssImporterSettings } from './settings';
+import type {
+	FeedConfig,
+	MediaLocation,
+	RssImporterSettings,
+} from './settings';
 import {
 	REQUEST_DELAY_MIN,
 	REQUEST_DELAY_MAX,
@@ -133,6 +138,7 @@ export class RssImporterSettingTab extends PluginSettingTab {
 					{
 						name: 'Media location',
 						desc: 'Save media into a vault subfolder, or to a folder outside the vault.',
+						visible: () => this.mediaDefaultApplies(),
 						control: {
 							type: 'dropdown',
 							key: 'mediaLocation',
@@ -145,11 +151,15 @@ export class RssImporterSettingTab extends PluginSettingTab {
 					{
 						name: 'Media subfolder',
 						desc: "Subfolder under each feed's folder for downloaded media.",
+						visible: () => this.mediaDefaultApplies('vault'),
 						control: { type: 'text', key: 'mediaSubfolder' },
 					},
 					{
 						name: 'Media folder outside vault',
 						desc: 'Absolute folder path for media when saving outside the vault (desktop only).',
+						visible: () =>
+							Platform.isDesktop &&
+							this.mediaDefaultApplies('outside'),
 						control: { type: 'text', key: 'mediaOutsideFolder' },
 					},
 					{
@@ -228,6 +238,25 @@ export class RssImporterSettingTab extends PluginSettingTab {
 		this.refreshDomState();
 	}
 
+	// Whether a media default is in use: a new feed takes the defaults, and an
+	// existing one can override the download toggle and the location, so the
+	// global toggle alone cannot say. With `location`, only feeds saving there
+	// count.
+	private mediaDefaultApplies(location?: MediaLocation): boolean {
+		const s = this.plugin.settings;
+		const uses = (download: boolean, at: MediaLocation): boolean =>
+			download && (location === undefined || at === location);
+		return (
+			uses(s.downloadMedia, s.mediaLocation) ||
+			s.feeds.some((feed) =>
+				uses(
+					effectiveDownloadMedia(feed, s),
+					effectiveMediaLocation(feed, s),
+				),
+			)
+		);
+	}
+
 	private openAddFeed(): void {
 		new AddFeedModal(this.app, {
 			settings: this.plugin.settings,
@@ -270,6 +299,13 @@ class FeedEditorPage extends SettingPage {
 
 	private get plugin(): RssImporterPluginLike {
 		return this.tab.plugin;
+	}
+
+	// Rebuild the parent tab on the way out: a per-feed media override decides
+	// which media defaults the tab shows.
+	hide(): void {
+		super.hide();
+		this.tab.update();
 	}
 
 	display(): void {

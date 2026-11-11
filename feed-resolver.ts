@@ -132,6 +132,30 @@ function isSubstackSubdomain(host: string): boolean {
 	return host.toLowerCase().endsWith(SUBSTACK_SUFFIX);
 }
 
+/**
+ * Sync classification used only to pick which source resolves a freshly entered
+ * input for the add-feed preview. The resolved feed's own sourceType (captured
+ * into the FeedConfig) is what drives import, so a custom-domain Substack that
+ * falls through to "generic" here still imports its free posts correctly.
+ * The handle and host are parsed the way resolve() parses them, not searched
+ * for: `substack.com` in a path or query string does not make a URL a Substack.
+ */
+export function classifyInputSourceType(input: string): SourceType {
+	const trimmed = input.trim().toLowerCase();
+	if (extractHandle(trimmed) !== null) {
+		return 'substack';
+	}
+	let host: string;
+	try {
+		host = new URL(ensureScheme(trimmed)).hostname;
+	} catch {
+		return 'generic';
+	}
+	return isSubstackApex(host) || isSubstackSubdomain(host)
+		? 'substack'
+		: 'generic';
+}
+
 /** True when a path ends in a recognized feed suffix. */
 function hasFeedPathSuffix(pathname: string): boolean {
 	const lower = pathname.replace(/\/$/, '').toLowerCase();
