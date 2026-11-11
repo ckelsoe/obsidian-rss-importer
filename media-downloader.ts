@@ -315,9 +315,7 @@ function getNodeFsPath(): {
 			'Node fs/path modules are not available on this platform.',
 		);
 	}
-	// eslint-disable-next-line @typescript-eslint/no-require-imports -- Obsidian docs require a Platform.isDesktop-guarded require() for Node built-ins so mobile builds do not pull them in; the require is the unavoidable consequence of that guidance.
 	const fs = require('fs') as typeof import('fs');
-	// eslint-disable-next-line @typescript-eslint/no-require-imports -- Obsidian docs require a Platform.isDesktop-guarded require() for Node built-ins so mobile builds do not pull them in; the require is the unavoidable consequence of that guidance.
 	const path = require('path') as typeof import('path');
 	return { fs, path };
 }

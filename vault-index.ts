@@ -21,7 +21,7 @@
 //
 // This module takes plain structural interfaces (`AppLike`, `FileLike`) rather
 // than importing Obsidian's runtime classes, so it can be unit-tested in the
-// node jest environment with plain-object fakes.
+// node Vitest environment with plain-object fakes.
 
 import { FRONTMATTER_KEYS } from './feed-source';
 import { trimChars } from './text-trim';

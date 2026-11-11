@@ -108,9 +108,9 @@ class FakeVault implements VaultBinaryLike {
 // -----------------------------------------------------------------------------
 
 describe('MediaDownloader.downloadToVault', () => {
-	let errorSpy: jest.SpyInstance;
+	let errorSpy: import('vitest').MockInstance;
 	beforeEach(() => {
-		errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+		errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 	});
 	afterEach(() => {
 		errorSpy.mockRestore();
@@ -295,9 +295,9 @@ describe('MediaDownloader.downloadToVault', () => {
 });
 
 describe('MediaDownloader.downloadToOutside', () => {
-	let errorSpy: jest.SpyInstance;
+	let errorSpy: import('vitest').MockInstance;
 	beforeEach(() => {
-		errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+		errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 	});
 	afterEach(() => {
 		errorSpy.mockRestore();
@@ -361,9 +361,9 @@ describe('MediaDownloader.downloadToOutside', () => {
 });
 
 describe('MediaDownloader.download', () => {
-	let errorSpy: jest.SpyInstance;
+	let errorSpy: import('vitest').MockInstance;
 	beforeEach(() => {
-		errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+		errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 	});
 	afterEach(() => {
 		errorSpy.mockRestore();

@@ -11,7 +11,7 @@
 //   - It is idempotent: applyCleanup(applyCleanup(x)) === applyCleanup(x).
 //
 // The module imports nothing from `obsidian` and touches no DOM, so it is fully
-// unit-testable in the node jest environment.
+// unit-testable in the node Vitest environment.
 
 import { trimTrailingChars } from './text-trim';
 

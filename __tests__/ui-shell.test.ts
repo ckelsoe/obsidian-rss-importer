@@ -1,7 +1,7 @@
 // Tests for the pure helpers extracted from the UI shell, plus smoke checks
 // that the DOM-wiring classes load. The Modal / SettingTab / FolderSuggest
 // classes themselves are DOM wiring exercised by Obsidian at runtime; here we
-// only assert they are defined (the `obsidian` import is stubbed by the jest
+// only assert they are defined (the `obsidian` import is stubbed by the test
 // mock). The real coverage is on the pure functions.
 
 import {

@@ -13,7 +13,7 @@ function makeClock(startMs = Date.UTC(2026, 0, 1, 0, 0, 0)): () => Date {
 	return (): Date => new Date(startMs + tick++ * 1000);
 }
 
-// A no-op console sink keeps Jest output clean and lets us assert against
+// A no-op console sink keeps test output clean and lets us assert against
 // what was forwarded to it without touching the global console.
 function makeSink(): {
 	sink: (message: string, payload?: unknown) => void;

@@ -1,5 +1,5 @@
-// Inert stub of the `obsidian` module for jest, wired in via moduleNameMapper
-// in jest.config.cjs.
+// Inert stub of the `obsidian` module for the tests, wired in via resolve.alias
+// in vitest.config.mts.
 //
 // `obsidian` is a peer dependency provided at runtime by Obsidian itself; at
 // test time there is no real module to resolve, so any source file that imports

@@ -1,4 +1,4 @@
-/** @jest-environment jsdom */
+/** @vitest-environment jsdom */
 
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -322,7 +322,7 @@ describe('SubstackFeedSource', () => {
 			throw new Error('expected an archive item');
 		}
 
-		const errorSpy = jest
+		const errorSpy = vi
 			.spyOn(console, 'error')
 			.mockImplementation(() => undefined);
 		const fetched = await source.fetchBody(archiveItem);

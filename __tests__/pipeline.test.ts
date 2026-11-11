@@ -1,4 +1,4 @@
-/** @jest-environment jsdom */
+/** @vitest-environment jsdom */
 //
 // End-to-end pipeline test: wires the REAL modules together (feed-xml parse via
 // the sources, html-converter, note-writer, vault-index) against the real

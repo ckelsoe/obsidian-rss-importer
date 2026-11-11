@@ -1,4 +1,4 @@
-/** @jest-environment jsdom */
+/** @vitest-environment jsdom */
 
 import { readFileSync } from 'fs';
 import { join } from 'path';
