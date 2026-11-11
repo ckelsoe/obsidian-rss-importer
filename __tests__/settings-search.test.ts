@@ -1,7 +1,8 @@
 // Obsidian's settings search finds a setting by its name, description and
 // aliases. A section drawn by hand has none of those unless it is given them.
-// This tab draws nothing by hand, so every row must carry a name and a string
-// description, and the media defaults show only while some feed uses them.
+// The only row drawn by hand is the footer, which stays out of search; every
+// other row carries a name and a string description, and the media defaults
+// show only while some feed uses them.
 
 import { App } from 'obsidian';
 import {
@@ -53,10 +54,12 @@ function shown(items: Item[]): Record<string, boolean> {
 }
 
 describe('settings search', () => {
-	it('draws nothing by hand, and names and describes every row', () => {
+	it('draws only the footer by hand, and names and describes every other row', () => {
 		const items = tabWith({});
-		expect(items.filter((i) => i.render !== undefined)).toEqual([]);
-		for (const i of items) {
+		const drawn = items.filter((i) => i.render !== undefined);
+		expect(drawn.map((i) => i.name)).toEqual(['About']);
+		expect((drawn[0] as { searchable?: boolean }).searchable).toBe(false);
+		for (const i of items.filter((x) => x.render === undefined)) {
 			expect(typeof i.name).toBe('string');
 			expect(i.name).not.toBe('');
 			expect(typeof i.desc).toBe('string');

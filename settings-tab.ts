@@ -46,6 +46,12 @@ export interface RssImporterPluginLike extends Plugin {
 	makeSource(input: string): { source: FeedSource };
 }
 
+// Community discussion for this plugin. This must stay a never-expiring
+// discord.gg invite: a discord.com/channels/... deep link only resolves for
+// accounts already in the server, so it cannot get anyone in, and a default
+// invite expires after 7 days and would rot in a shipped release.
+const DISCORD_URL = 'https://discord.gg/gd6tKJDPj4';
+
 export class RssImporterSettingTab extends PluginSettingTab {
 	// Narrow the base PluginSettingTab `plugin` field to our typed plugin. This
 	// must be a plain field, NOT a getter: the base constructor assigns
@@ -204,6 +210,13 @@ export class RssImporterSettingTab extends PluginSettingTab {
 					},
 				],
 			},
+			{
+				name: 'About',
+				searchable: false,
+				render: (setting: Setting) => {
+					this.renderFooter(setting);
+				},
+			},
 		];
 	}
 
@@ -254,6 +267,37 @@ export class RssImporterSettingTab extends PluginSettingTab {
 					effectiveMediaLocation(feed, s),
 				),
 			)
+		);
+	}
+
+	// Version and support links, the same footer every plugin in the family
+	// shows. Each separator shares a nowrap span with the link after it, so a
+	// narrow pane wraps between whole "| Link" units.
+	private renderFooter(setting: Setting): void {
+		const el = setting.settingEl;
+		el.empty();
+		el.addClass('rss-importer-settings-footer');
+		const inner = el.createDiv({ cls: 'rss-importer-footer-inner' });
+		inner.createSpan({
+			text: `Version ${this.plugin.manifest.version || '0.0.0'}`,
+		});
+		const link = (text: string, url: string): void => {
+			const item = inner.createSpan({ cls: 'rss-importer-footer-link' });
+			item.createSpan({
+				cls: 'rss-importer-footer-separator',
+				text: '|',
+			});
+			item.createEl('a', {
+				text,
+				href: url,
+				attr: { target: '_blank', rel: 'noopener' },
+			});
+		};
+		link('GitHub', 'https://github.com/ckelsoe/obsidian-rss-importer');
+		link('Discord', DISCORD_URL);
+		link(
+			'Report issues',
+			'https://github.com/ckelsoe/obsidian-rss-importer/issues',
 		);
 	}
 
