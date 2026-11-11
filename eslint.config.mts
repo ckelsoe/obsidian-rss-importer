@@ -85,6 +85,7 @@ export default tseslint.config(
 		},
 	},
 	globalIgnores([
+		".husky",
 		"node_modules",
 		"dist",
 		".stryker-tmp",
