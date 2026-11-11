@@ -101,9 +101,9 @@ const identityConvert = (html: string): string => `MD:${html}`;
 // -----------------------------------------------------------------------------
 
 describe('ImportRunner.run', () => {
-	let errorSpy: jest.SpyInstance;
+	let errorSpy: import('vitest').MockInstance;
 	beforeEach(() => {
-		errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+		errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 	});
 	afterEach(() => {
 		errorSpy.mockRestore();

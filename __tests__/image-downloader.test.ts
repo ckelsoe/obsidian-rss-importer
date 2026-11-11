@@ -82,9 +82,9 @@ class FakeVault implements VaultBinaryLike {
 // -----------------------------------------------------------------------------
 
 describe('ImageDownloader.downloadAndRewrite', () => {
-	let errorSpy: jest.SpyInstance;
+	let errorSpy: import('vitest').MockInstance;
 	beforeEach(() => {
-		errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+		errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 	});
 	afterEach(() => {
 		errorSpy.mockRestore();

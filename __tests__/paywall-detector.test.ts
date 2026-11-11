@@ -1,4 +1,4 @@
-/** @jest-environment jsdom */
+/** @vitest-environment jsdom */
 
 import { detectPaywall } from '../paywall-detector';
 
