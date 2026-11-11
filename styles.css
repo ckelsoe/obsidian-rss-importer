@@ -393,3 +393,30 @@
 	gap: var(--size-4-2);
 	margin-top: var(--size-4-3);
 }
+
+/* Settings footer: version and support links. The separators are a flex gap,
+   not whitespace in text nodes, and each "|" wraps with its link. */
+.rss-importer-settings-footer {
+	justify-content: center;
+	text-align: center;
+	opacity: 0.8;
+}
+
+.rss-importer-footer-inner {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: var(--size-4-2);
+}
+
+.rss-importer-footer-link {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	white-space: nowrap;
+}
+
+.rss-importer-footer-separator {
+	color: var(--text-faint);
+}

@@ -11,6 +11,7 @@ import {
 	App,
 	type ButtonComponent,
 	Notice,
+	Platform,
 	PluginSettingTab,
 	Setting,
 	SettingPage,
@@ -18,7 +19,11 @@ import {
 	type SettingDefinitionItem,
 } from 'obsidian';
 import type { FeedSource, SourceType } from './feed-source';
-import type { FeedConfig, RssImporterSettings } from './settings';
+import type {
+	FeedConfig,
+	MediaLocation,
+	RssImporterSettings,
+} from './settings';
 import {
 	REQUEST_DELAY_MIN,
 	REQUEST_DELAY_MAX,
@@ -40,6 +45,12 @@ export interface RssImporterPluginLike extends Plugin {
 	/** Picks a source for a user-supplied feed input (wired in main.ts). */
 	makeSource(input: string): { source: FeedSource };
 }
+
+// Community discussion for this plugin. This must stay a never-expiring
+// discord.gg invite: a discord.com/channels/... deep link only resolves for
+// accounts already in the server, so it cannot get anyone in, and a default
+// invite expires after 7 days and would rot in a shipped release.
+const DISCORD_URL = 'https://discord.gg/gd6tKJDPj4';
 
 export class RssImporterSettingTab extends PluginSettingTab {
 	// Narrow the base PluginSettingTab `plugin` field to our typed plugin. This
@@ -133,6 +144,7 @@ export class RssImporterSettingTab extends PluginSettingTab {
 					{
 						name: 'Media location',
 						desc: 'Save media into a vault subfolder, or to a folder outside the vault.',
+						visible: () => this.mediaDefaultApplies(),
 						control: {
 							type: 'dropdown',
 							key: 'mediaLocation',
@@ -145,11 +157,15 @@ export class RssImporterSettingTab extends PluginSettingTab {
 					{
 						name: 'Media subfolder',
 						desc: "Subfolder under each feed's folder for downloaded media.",
+						visible: () => this.mediaDefaultApplies('vault'),
 						control: { type: 'text', key: 'mediaSubfolder' },
 					},
 					{
 						name: 'Media folder outside vault',
 						desc: 'Absolute folder path for media when saving outside the vault (desktop only).',
+						visible: () =>
+							Platform.isDesktop &&
+							this.mediaDefaultApplies('outside'),
 						control: { type: 'text', key: 'mediaOutsideFolder' },
 					},
 					{
@@ -194,6 +210,13 @@ export class RssImporterSettingTab extends PluginSettingTab {
 					},
 				],
 			},
+			{
+				name: 'About',
+				searchable: false,
+				render: (setting: Setting) => {
+					this.renderFooter(setting);
+				},
+			},
 		];
 	}
 
@@ -226,6 +249,56 @@ export class RssImporterSettingTab extends PluginSettingTab {
 		}
 		await this.plugin.saveSettings();
 		this.refreshDomState();
+	}
+
+	// Whether a media default is in use: a new feed takes the defaults, and an
+	// existing one can override the download toggle and the location, so the
+	// global toggle alone cannot say. With `location`, only feeds saving there
+	// count.
+	private mediaDefaultApplies(location?: MediaLocation): boolean {
+		const s = this.plugin.settings;
+		const uses = (download: boolean, at: MediaLocation): boolean =>
+			download && (location === undefined || at === location);
+		return (
+			uses(s.downloadMedia, s.mediaLocation) ||
+			s.feeds.some((feed) =>
+				uses(
+					effectiveDownloadMedia(feed, s),
+					effectiveMediaLocation(feed, s),
+				),
+			)
+		);
+	}
+
+	// Version and support links, the same footer every plugin in the family
+	// shows. Each separator shares a nowrap span with the link after it, so a
+	// narrow pane wraps between whole "| Link" units.
+	private renderFooter(setting: Setting): void {
+		const el = setting.settingEl;
+		el.empty();
+		el.addClass('rss-importer-settings-footer');
+		const inner = el.createDiv({ cls: 'rss-importer-footer-inner' });
+		inner.createSpan({
+			text: `Version ${this.plugin.manifest.version || '0.0.0'}`,
+		});
+		const link = (text: string, url: string): void => {
+			const item = inner.createSpan({ cls: 'rss-importer-footer-link' });
+			item.createSpan({
+				cls: 'rss-importer-footer-separator',
+				text: '|',
+			});
+			item.createEl('a', {
+				text,
+				href: url,
+				attr: { target: '_blank', rel: 'noopener' },
+			});
+		};
+		link('GitHub', 'https://github.com/ckelsoe/obsidian-rss-importer');
+		link('Discord', DISCORD_URL);
+		link(
+			'Report issues',
+			'https://github.com/ckelsoe/obsidian-rss-importer/issues',
+		);
 	}
 
 	private openAddFeed(): void {
@@ -270,6 +343,13 @@ class FeedEditorPage extends SettingPage {
 
 	private get plugin(): RssImporterPluginLike {
 		return this.tab.plugin;
+	}
+
+	// Rebuild the parent tab on the way out: a per-feed media override decides
+	// which media defaults the tab shows.
+	hide(): void {
+		super.hide();
+		this.tab.update();
 	}
 
 	display(): void {

@@ -62,6 +62,10 @@ In Obsidian, go to **Settings → Community plugins → Browse**, search for **R
 
 See [CHANGELOG.md](./CHANGELOG.md) for release history.
 
+## Community
+
+Questions, ideas, and general discussion happen on [Discord](https://discord.gg/gd6tKJDPj4). For anything that needs tracking, open a [GitHub issue](https://github.com/ckelsoe/obsidian-rss-importer/issues).
+
 ## Contributing
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup, quality gates, and conventions.
