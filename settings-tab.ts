@@ -164,7 +164,7 @@ export class RssImporterSettingTab extends PluginSettingTab {
 						name: 'Media folder outside vault',
 						desc: 'Absolute folder path for media when saving outside the vault (desktop only).',
 						visible: () =>
-							Platform.isDesktop &&
+							Platform.isDesktopApp &&
 							this.mediaDefaultApplies('outside'),
 						control: { type: 'text', key: 'mediaOutsideFolder' },
 					},

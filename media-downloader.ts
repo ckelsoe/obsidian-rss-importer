@@ -9,7 +9,7 @@
 // The vault path reuses image-downloader's VaultBinaryLike surface so Obsidian's
 // Vault satisfies it structurally and tests inject a plain object. The outside
 // path uses Node fs/path, which on a marketplace plugin must be require()'d
-// behind a Platform.isDesktop guard (see CLAUDE.md). To keep the module unit
+// behind a Platform.isDesktopApp guard. To keep the module unit
 // testable without touching the real filesystem, the constructor accepts an
 // optional fileWriter the outside path prefers over the Node fallback.
 
@@ -156,7 +156,7 @@ export class MediaDownloader {
 	/**
 	 * Fetch the item's media and write it to an absolute path under `absFolder`.
 	 * Desktop only. Uses the injected fileWriter when present (tests); otherwise
-	 * Node fs/path behind a Platform.isDesktop guard. Returns the absolute path on
+	 * Node fs/path behind a Platform.isDesktopApp guard. Returns the absolute path on
 	 * success, or null (never throws) on non-desktop, no media, or any failure.
 	 */
 	async downloadToOutside(
@@ -167,7 +167,7 @@ export class MediaDownloader {
 		if (mediaUrl === null || mediaUrl.length === 0) {
 			return null;
 		}
-		if (this.fileWriter === undefined && !Platform.isDesktop) {
+		if (this.fileWriter === undefined && !Platform.isDesktopApp) {
 			console.error(
 				`RSS Importer: media download skipped for ${mediaUrl}: outside-vault writes need a desktop app`,
 			);
@@ -301,8 +301,8 @@ export class MediaDownloader {
 
 /**
  * Resolve Node's fs and path modules. Obsidian's guidelines require Node
- * built-ins to be loaded via a Platform.isDesktop-guarded require() so the
- * mobile bundle never references them; callers must gate on Platform.isDesktop
+ * built-ins to be loaded via a Platform.isDesktopApp-guarded require() so the
+ * mobile bundle never references them; callers must gate on Platform.isDesktopApp
  * before reaching here. The require, the unsafe cast, and the node-module import
  * are the unavoidable consequences of that guidance.
  */
@@ -310,7 +310,7 @@ function getNodeFsPath(): {
 	fs: typeof import('fs');
 	path: typeof import('path');
 } {
-	if (!Platform.isDesktop) {
+	if (!Platform.isDesktopApp) {
 		throw new Error(
 			'Node fs/path modules are not available on this platform.',
 		);

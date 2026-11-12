@@ -4,7 +4,7 @@
 // The scan reproduction strips @types/node (via `types: []`) so a lib-version
 // gap is exposed instead of masked. That also removes the Node globals the
 // desktop-only media code relies on (`require`, `Buffer`, and the `fs`/`path`
-// modules behind Platform.isDesktop). The hosted developer-dashboard scan
+// modules behind Platform.isDesktopApp). The hosted developer-dashboard scan
 // resolves those from its Node/Electron runtime, so they are NOT what the guard
 // exists to catch; these minimal shims reproduce that so the guard does not
 // false-fail on them while still surfacing any lib gap (the shims declare no
