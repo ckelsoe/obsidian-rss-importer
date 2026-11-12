@@ -1,3 +1,4 @@
+import { Platform } from 'obsidian';
 import type {
 	FeedItem,
 	HttpFetcher,
@@ -262,6 +263,30 @@ describe('MediaDownloader.downloadToVault', () => {
 
 		expect(out).toBeNull();
 		expect(errorSpy).toHaveBeenCalled();
+	});
+
+	it('refuses an outside write without the desktop app, even in a desktop layout', async () => {
+		const url = 'https://media.example.com/ep/one.mp3';
+		const { fetcher, requested } = makeFetcher({
+			[url]: { body: bytes('A') },
+		});
+		const platform = Platform as {
+			isDesktop: boolean;
+			isDesktopApp: boolean;
+		};
+		platform.isDesktopApp = false;
+		try {
+			const dl = new MediaDownloader({ fetcher, vault: new FakeVault() });
+			const out = await dl.downloadToOutside(
+				makeItem({ mediaUrl: url }),
+				'/Users/me/Podcasts',
+			);
+			expect(platform.isDesktop).toBe(true);
+			expect(out).toBeNull();
+			expect(requested).toHaveLength(0);
+		} finally {
+			platform.isDesktopApp = true;
+		}
 	});
 
 	it('returns null without fetching when the item has no media url', async () => {
