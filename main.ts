@@ -86,7 +86,7 @@ const obsidianFetcher: HttpFetcher = async (
 // exception is a genuine bug and propagates loudly.
 function safeJson(response: RequestUrlResponse): unknown {
 	try {
-		return response.json;
+		return (response as { json: unknown }).json;
 	} catch (err) {
 		if (err instanceof SyntaxError) {
 			return null;
@@ -126,7 +126,7 @@ function isMediaLocation(value: unknown): value is MediaLocation {
 function isStringArray(value: unknown): value is string[] {
 	return (
 		Array.isArray(value) &&
-		value.every((entry) => typeof entry === 'string')
+		value.every((entry: unknown) => typeof entry === 'string')
 	);
 }
 
@@ -136,7 +136,7 @@ function isStringArray(value: unknown): value is string[] {
 function coerceStringArray(value: unknown, fallback: string[]): string[] {
 	if (Array.isArray(value)) {
 		return value.filter(
-			(entry): entry is string => typeof entry === 'string',
+			(entry: unknown): entry is string => typeof entry === 'string',
 		);
 	}
 	return [...fallback];
