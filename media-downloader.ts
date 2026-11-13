@@ -228,7 +228,7 @@ export class MediaDownloader {
 	private async fetchMedia(
 		url: string,
 	): Promise<{ bytes: ArrayBuffer; contentType: string } | null> {
-		let response;
+		let response: Awaited<ReturnType<HttpFetcher>>;
 		try {
 			response = await this.fetcher({ url, method: 'GET' });
 		} catch (err) {
