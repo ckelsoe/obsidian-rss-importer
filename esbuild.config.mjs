@@ -81,6 +81,9 @@ const context = await esbuild.context({
 		...builtinModules.map(m => `node:${m}`)],
 	format: "cjs",
 	target: "es2018",
+	// Obsidian cannot resolve import("fs") at runtime; compile dynamic imports
+	// of Node built-ins to a lazy require() in the bundle.
+	supported: { "dynamic-import": false },
 	logLevel: "info",
 	sourcemap: prod ? false : "inline",
 	treeShaking: true,

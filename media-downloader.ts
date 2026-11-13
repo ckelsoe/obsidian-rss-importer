@@ -188,7 +188,7 @@ export class MediaDownloader {
 		const fileName = deriveFileName(item, mediaUrl, fetched.contentType);
 
 		try {
-			return this.writeOutside(absFolder, fileName, fetched.bytes);
+			return await this.writeOutside(absFolder, fileName, fetched.bytes);
 		} catch (err) {
 			console.error(
 				`RSS Importer: media write failed for ${mediaUrl}: ${describe(err)}`,
@@ -199,21 +199,21 @@ export class MediaDownloader {
 
 	/**
 	 * Write bytes to absFolder/fileName, preferring the injected fileWriter. When
-	 * none is injected, use Node fs/path behind a desktop guard: require() rather
-	 * than a top-level import keeps the bundle clean of Node built-ins on mobile,
-	 * per the marketplace scorecard. Returns the absolute path written.
+	 * none is injected, use Node fs/path behind a desktop guard: a dynamic import
+	 * rather than a top-level one keeps the bundle clean of Node built-ins on
+	 * mobile, per the marketplace scorecard. Returns the absolute path written.
 	 */
-	private writeOutside(
+	private async writeOutside(
 		absFolder: string,
 		fileName: string,
 		bytes: ArrayBuffer,
-	): string {
+	): Promise<string> {
 		if (this.fileWriter !== undefined) {
 			const joined = joinPosix(absFolder, fileName);
 			this.fileWriter(joined, bytes);
 			return joined;
 		}
-		const { fs, path } = getNodeFsPath();
+		const { fs, path } = await getNodeFsPath();
 		fs.mkdirSync(absFolder, { recursive: true });
 		const target = path.join(absFolder, fileName);
 		fs.writeFileSync(target, Buffer.from(bytes));
@@ -300,24 +300,19 @@ export class MediaDownloader {
 // -----------------------------------------------------------------------------
 
 /**
- * Resolve Node's fs and path modules. Obsidian's guidelines require Node
- * built-ins to be loaded via a Platform.isDesktopApp-guarded require() so the
- * mobile bundle never references them; callers must gate on Platform.isDesktopApp
- * before reaching here. The require, the unsafe cast, and the node-module import
- * are the unavoidable consequences of that guidance.
+ * Load Node's fs and path modules. The marketplace scan accepts a dynamic
+ * import() of a Node built-in only behind Platform.isDesktop; isDesktopApp makes
+ * sure Node is really there (a desktop-sized tablet is isDesktop too).
  */
-function getNodeFsPath(): {
+async function getNodeFsPath(): Promise<{
 	fs: typeof import('fs');
 	path: typeof import('path');
-} {
-	if (!Platform.isDesktopApp) {
-		throw new Error(
-			'Node fs/path modules are not available on this platform.',
-		);
+}> {
+	if (Platform.isDesktop && Platform.isDesktopApp) {
+		const [fs, path] = await Promise.all([import('fs'), import('path')]);
+		return { fs, path };
 	}
-	const fs = require('fs') as typeof import('fs');
-	const path = require('path') as typeof import('path');
-	return { fs, path };
+	throw new Error('Node fs/path modules are not available on this platform.');
 }
 
 /** Read a header case-insensitively; returns "" when absent. */
